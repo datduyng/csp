@@ -16,4 +16,6 @@ public abstract class Constraint {
     public String toString() {
         return name;
     }
+
+    public abstract String toFullString();
 }

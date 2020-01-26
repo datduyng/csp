@@ -11,7 +11,14 @@ public class Domain {
         this.name = name; this.values = values;
     }
 
+    public String valuesToString() {
+        StringBuilder sb = new StringBuilder("{");
+        Arrays.stream(values).forEach((v) -> {
+            sb.append(v+",");
+        });
+        return sb.append("}").toString();
+    }
     public String toString() {
-        return name;
+        return valuesToString();
     }
 }
