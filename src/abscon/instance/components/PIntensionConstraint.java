@@ -9,6 +9,10 @@ public class PIntensionConstraint extends PConstraint {
 
 	private String[] universalPostfixExpression;
 
+	private String effectiveParametersExpression;
+
+	public String getEffectiveParametersExpression() { return effectiveParametersExpression; }
+
 	public PFunction getFunction() {
 		return function;
 	}
@@ -26,7 +30,7 @@ public class PIntensionConstraint extends PConstraint {
 			variableNames[i] = scope[i].getName();
 
 		this.universalPostfixExpression = PredicateManager.buildNewUniversalPostfixExpression(function.getUniversalPostfixExpression(), effectiveParametersExpression, variableNames);
-		// System.out.println(universalPredicateExpression);
+		this.effectiveParametersExpression = effectiveParametersExpression;
 	}
 
 	public long computeCostOf(int[] tuple) {

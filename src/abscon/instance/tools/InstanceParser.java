@@ -40,6 +40,8 @@ import abscon.instance.components.Task;
 public class InstanceParser {
 	public static final String VERSION = "version 2.1.4 (November 4, 2008)";
 
+	private String presentationName;
+
 	private Document document;
 
 	private String type;
@@ -126,6 +128,7 @@ public class InstanceParser {
 		return minViolatedConstraints;
 	}
 
+	public String getPresentationName() { return presentationName; }
 	/**
 	 * Used to determine if elements of the instance must be displayed when parsing.
 	 */
@@ -142,6 +145,7 @@ public class InstanceParser {
 	}
 
 	private void parsePresentation(Element presentationElement) {
+		this.presentationName = presentationElement.getAttribute("name");
 		String s = presentationElement.getAttribute(InstanceTokens.MAX_CONSTRAINT_ARITY.trim());
 		maxConstraintArity = s.length() == 0 || s.equals("?") ? -1 : Integer.parseInt(s);
 		type = presentationElement.getAttribute(InstanceTokens.TYPE.trim());

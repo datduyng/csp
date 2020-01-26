@@ -11,7 +11,7 @@ public class PFunction {
 
 	protected String functionalExpression;
 
-	protected String[] unversalPostfixExpression;
+	protected String[] universalPostfixExpression;
 	
 
 	public String getName() {
@@ -23,17 +23,20 @@ public class PFunction {
 	}
 
 	public String[] getUniversalPostfixExpression() {
-		return unversalPostfixExpression;
+		return universalPostfixExpression;
 	}
+
+	public String getFunctionalExpression() { return functionalExpression; }
+
 
 	public PFunction(String name, String formalParametersExpression, String functionalExpression) {
 		this.name = name;
 		this.formalParameters =  PredicateManager.extractFormalParameters(formalParametersExpression,true);
 		this.functionalExpression = functionalExpression;
-		this.unversalPostfixExpression = PredicateManager.buildUniversalPostfixExpression(functionalExpression, formalParameters);
+		this.universalPostfixExpression = PredicateManager.buildUniversalPostfixExpression(functionalExpression, formalParameters);
 	}
 
 	public String toString() {
-		return "  function " + name + " with functional expression = " + functionalExpression + " and (universal) postfix expression = " + Toolkit.buildStringFromTokens(unversalPostfixExpression);
+		return "  function " + name + " with functional expression = " + functionalExpression + " and (universal) postfix expression = " + Toolkit.buildStringFromTokens(universalPostfixExpression);
 	}
 }

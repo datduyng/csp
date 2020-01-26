@@ -9,6 +9,6 @@ public class PPredicate extends PFunction {
 	}
 
 	public String toString() {
-		return "  predicate " + name + " with functional expression = " + functionalExpression + " and (universal) postfix expression = " + Toolkit.buildStringFromTokens(unversalPostfixExpression);
+		return "  predicate " + name + " with functional expression = " + functionalExpression + " and (universal) postfix expression = " + Toolkit.buildStringFromTokens(universalPostfixExpression);
 	}
 }
