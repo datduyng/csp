@@ -7,3 +7,12 @@ out
 src/.DS_Store
 
 bin
+
+*/*/*~
+
+
+*~
+
+*.jar
+
+*.zip
