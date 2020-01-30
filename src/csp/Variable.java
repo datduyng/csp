@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static csp.Variable.varsToString;
 
@@ -21,13 +22,12 @@ public class Variable {
         this.constraints = new ArrayList<>();
         this.neighbors = new HashSet<>();
     }
+    public String getName() { return this.name; }
 
     public static String varsToString(Set<Variable> vars) {
-        StringBuilder res = new StringBuilder("{");
-        vars.forEach((v) -> {
-            res.append(", " + v.name);
-        });
-        return res.append(" }").toString();
+        String varsInStr = String.join(",",
+                vars.stream().map(Variable::getName).collect(Collectors.toList()));
+        return "{" + varsInStr + "}";
     }
 
     public String toString() {

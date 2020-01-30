@@ -147,9 +147,13 @@ public class MyParser {
     }
 
     public static void main(String[] args) {
+        if (args.length == 2 && args[0].equals("-f")) {
+            MyParser parser = new MyParser(args[1]);
+            ProblemInstance pi = parser.parse();
+            System.out.println(pi.toString());
+        } else {
+            System.out.println("Usage: -f <filename>");
+        }
 
-        MyParser parser = new MyParser("./tests/5queens-intension.xml");
-        ProblemInstance pi = parser.parse();
-        System.out.println(pi.toString());
     }
 }

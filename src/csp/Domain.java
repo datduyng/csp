@@ -2,6 +2,8 @@ package csp;
 
 
 import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class Domain {
     String name;
@@ -12,11 +14,11 @@ public class Domain {
     }
 
     public String valuesToString() {
-        StringBuilder sb = new StringBuilder("{");
-        Arrays.stream(values).forEach((v) -> {
-            sb.append(v+",");
-        });
-        return sb.append("}").toString();
+        List<String> ss = Arrays.stream(values)
+                .mapToObj(n -> String.valueOf(n))
+                .collect(Collectors.toList());
+        String valInStr = String.join(",", ss);
+        return "{" + valInStr + "}";
     }
     public String toString() {
         return valuesToString();
