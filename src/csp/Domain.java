@@ -1,26 +1,26 @@
 package csp;
 
-
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
+import java.util.HashSet;
+import java.util.Set;
 
 public class Domain {
     String name;
-    int[] values;
+    Set<Integer> values;
 
-    public Domain(String name, int[] values) {
-        this.name = name; this.values = values;
+    public Domain(String name, Set<Integer> values) {
+        this.name = name;
+        this.values = new HashSet<>(values);
     }
 
     public String valuesToString() {
-        List<String> ss = Arrays.stream(values)
-                .mapToObj(n -> String.valueOf(n))
-                .collect(Collectors.toList());
-        String valInStr = String.join(",", ss);
+        String valInStr = values.toString();
         return "{" + valInStr + "}";
     }
     public String toString() {
         return valuesToString();
+    }
+
+    public static Domain deepCopy(Domain other) {
+        return new Domain(other.name, other.values);
     }
 }

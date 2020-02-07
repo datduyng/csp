@@ -1,6 +1,8 @@
 package csp;
 
 import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class Relation {
     String name;
@@ -15,12 +17,22 @@ public class Relation {
         this.tuples = tuples;
     }
 
+    public static String arr2Str(int[] arr) {
+        return "(" + arr[0] + "," + arr[1] + ")";
+    }
     public String tuplesToString() {
-        StringBuilder sb = new StringBuilder("{");
-        Arrays.stream(tuples).forEach((tup) -> {
-            sb.append("("+tup[0]+","+tup[1]+")");
-        });
-        return sb.append("}").toString();
+        List<String> ss = Arrays.stream(tuples)
+                .map(Relation::arr2Str)
+                .collect(Collectors.toList());
+
+        return "{" + String.join(",",ss) + "}";
+    }
+
+    public static boolean isTupleInTuples(int[] key, int[][] tuples) {
+        for (int[] tup : tuples) {
+            if (key[0] == tup[0] && key[1] == tup[1]) { return true; }
+        }
+        return false;
     }
 
 }

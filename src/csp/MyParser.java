@@ -2,8 +2,11 @@ package csp;
 
 import abscon.instance.components.*;
 import abscon.instance.tools.InstanceParser;
+import utils.CliArgs;
+import utils.Logger;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class MyParser {
     private List<Variable> variables;
@@ -11,6 +14,7 @@ public class MyParser {
     private Map<String, Variable> mapOfVariables;
     private Map<String, Relation> mapOfRelations;
     private Map<String, Constraint> mapOfConstraints;
+    private Map<LinkedHashSet<Variable>, Constraint> variableConstraintMap;
     InstanceParser parser;
     public MyParser() {
         variables = new ArrayList<>();
@@ -19,6 +23,7 @@ public class MyParser {
         mapOfRelations = new LinkedHashMap<>();
         mapOfConstraints = new LinkedHashMap<>();
         parser = new InstanceParser();
+        variableConstraintMap = new HashMap<>();
     }
     public MyParser(String filename) {
         this();
@@ -27,21 +32,27 @@ public class MyParser {
     }
 
     public ProblemInstance parse() {
-        this.variables = new ArrayList<Variable>();
+        this.variables = new ArrayList<>();
 
         /* Deserialize list of Domain */
         Map<String, PDomain> mapOfPDomains = parser.getMapOfDomains();
 
         for (Map.Entry<String, PDomain> entry : mapOfPDomains.entrySet()) {
             this.mapOfDomains.put(entry.getKey(),
-                    new Domain(entry.getValue().getName(), entry.getValue().getValues()));
+                    new Domain(entry.getValue().getName(),
+                            Arrays.stream(entry.getValue().getValues())
+                                    .mapToObj(n -> new Integer(n))
+                                    .collect(Collectors.toSet()))
+            );
         }
 
         /* Deserialize List of Variable */
         for (PVariable pvar : parser.getVariables()) {
             String varDomain = pvar.getDomain().getName();
             this.mapOfVariables.put(pvar.getName(),
-                    new Variable(pvar.getName(), this.mapOfDomains.get(varDomain), this.mapOfDomains.get(varDomain))
+                    new Variable(pvar.getName(),
+                            this.mapOfDomains.get(varDomain),
+                            Domain.deepCopy(this.mapOfDomains.get(varDomain)) )
             );
         }
 
@@ -95,15 +106,23 @@ public class MyParser {
 
             }
 
+            this.variableConstraintMap.put(
+                    new LinkedHashSet<>(constraint.scope), constraint
+            );
+
             this.mapOfConstraints.put(entry.getKey(), constraint);
             // reference constraint to its variable
             Constraint finalConstraint = constraint;
-            constraint.scope.forEach(
-                    (var) -> var.constraints.add(finalConstraint)
-            );
+            constraint.scope.forEach((var) -> {
+                var.constraints.add(finalConstraint);
+            });
         }
 
-        return new ProblemInstance(parser.getPresentationName(), this.mapOfVariables, this.mapOfConstraints);
+        return new ProblemInstance(
+                parser.getPresentationName(),
+                this.mapOfVariables,
+                this.mapOfConstraints,
+                this.variableConstraintMap);
     }
 
     public <V> Map<String, V> sortHashMapByKey(Map<String, V> hmap) {
@@ -147,12 +166,33 @@ public class MyParser {
     }
 
     public static void main(String[] args) {
-        if (args.length == 2 && args[0].equals("-f")) {
-            MyParser parser = new MyParser(args[1]);
-            ProblemInstance pi = parser.parse();
-            System.out.println(pi.toString());
+        CliArgs cliArgs = new CliArgs(args);
+
+        String file = cliArgs.switchValue("-f", null);
+        String acType = cliArgs.switchValue("-a", null);
+        boolean showInfo = cliArgs.switchPresent("-info");
+
+        if (file == null || acType == null) {
+            Logger.error("Usage: -f <filename> -a [ac1 | ac3] [-info]");
+            return;
+        }
+
+        MyParser parser = new MyParser(file);
+        ProblemInstance pi = parser.parse();
+        if (showInfo) {
+            Logger.info("Problem info: \n");
+            Logger.stdout(pi.toString());
+            Logger.stdout("\n");
+        }
+
+
+        CSPSolver cspSolver = new CSPSolver(pi);
+
+        if (acType.equals("ac1")) {
+            boolean correct = cspSolver.arcConsistency1();
+            Logger.stdout(cspSolver.solverReport());
         } else {
-            System.out.println("Usage: -f <filename>");
+            Logger.info("Not yet implemented");
         }
 
     }
