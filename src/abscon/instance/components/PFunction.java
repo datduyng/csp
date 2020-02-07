@@ -2,10 +2,16 @@ package abscon.instance.components;
 
 import abscon.instance.Toolkit;
 import abscon.instance.intension.PredicateManager;
+import utils.Logger;
 
-public class PFunction { 
+import java.util.Arrays;
+
+public class PFunction {
+
 
 	protected String name;
+
+	public String effectiveParametersExpression;
 
 	protected String[] formalParameters;
 
@@ -36,7 +42,15 @@ public class PFunction {
 		this.universalPostfixExpression = PredicateManager.buildUniversalPostfixExpression(functionalExpression, formalParameters);
 	}
 
+//	public String toString() {
+//		return "  function " + name + " with functional expression = " + functionalExpression + " and (universal) postfix expression = " + Toolkit.buildStringFromTokens(universalPostfixExpression);
+//	}
+
 	public String toString() {
-		return "  function " + name + " with functional expression = " + functionalExpression + " and (universal) postfix expression = " + Toolkit.buildStringFromTokens(universalPostfixExpression);
+		Logger.stdout(Arrays.toString(formalParameters));
+		Logger.stdout(Arrays.toString(universalPostfixExpression));
+		String eParamExpr = String.join(",", effectiveParametersExpression.split(" "));
+		return "function: " + functionalExpression + ", " +
+				"params: " + "{" + eParamExpr + "}";
 	}
 }
