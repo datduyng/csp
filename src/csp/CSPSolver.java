@@ -17,7 +17,7 @@ public class CSPSolver {
     private Double fSize;
 
     public CSPSolver(ProblemInstance problemInstance) {
-        this.problemInstance = problemInstance;
+        this.setProblemInstance(problemInstance);
         this.setTimeSetup(0);
         this.setCpuTime(0);
         this.setCc(0);
@@ -43,8 +43,6 @@ public class CSPSolver {
         if (constraint instanceof ExtensionConstraint) {
             ExtensionConstraint exCon = (ExtensionConstraint) constraint;
             boolean isIn = exCon.isSupportedBy(new int[]{vali, valj});
-//            boolean isIn = Relation.isTupleInTuples(new int[]{vali, valj},
-//                    ((ExtensionConstraint) constraint).relation.tuples);
             return isIn;
         } else {
             boolean isIn = constraint.isSupportedBy(new int[]{vali, valj});
