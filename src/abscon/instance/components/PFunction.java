@@ -47,8 +47,6 @@ public class PFunction {
 //	}
 
 	public String toString() {
-		Logger.stdout(Arrays.toString(formalParameters));
-		Logger.stdout(Arrays.toString(universalPostfixExpression));
 		String eParamExpr = String.join(",", effectiveParametersExpression.split(" "));
 		return "function: " + functionalExpression + ", " +
 				"params: " + "{" + eParamExpr + "}";

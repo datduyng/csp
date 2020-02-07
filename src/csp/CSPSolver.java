@@ -1,5 +1,7 @@
 package csp;
 
+import utils.Logger;
+
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -9,12 +11,20 @@ public class CSPSolver {
     private long cpuTime;
     private long cc;
     private long fval;
-    private double fSize;
+
     private double fEffect;
     private double iSize;
+    private Double fSize;
 
     public CSPSolver(ProblemInstance problemInstance) {
         this.problemInstance = problemInstance;
+        this.setTimeSetup(0);
+        this.setCpuTime(0);
+        this.setCc(0);
+        this.setFval(0);
+        this.setiSize(0.);
+        this.setfSize(0.);
+        this.setfEffect(0.);
     }
     /*
      * Verifies where a constraint exist between Vi and Vj. or
@@ -32,18 +42,14 @@ public class CSPSolver {
                     .get(new HashSet<>(Arrays.asList(vi, vj)));
         if (constraint instanceof ExtensionConstraint) {
             ExtensionConstraint exCon = (ExtensionConstraint) constraint;
-            boolean isIn = exCon.computeCostOf(new int[]{vali, valj});
+            boolean isIn = exCon.isSupportedBy(new int[]{vali, valj});
 //            boolean isIn = Relation.isTupleInTuples(new int[]{vali, valj},
 //                    ((ExtensionConstraint) constraint).relation.tuples);
-            if (exCon.relation.semantics.equals("conflicts")) {
-                return !isIn;
-            } else {
-                return isIn;
-            }
+            return isIn;
         } else {
-
+            boolean isIn = constraint.isSupportedBy(new int[]{vali, valj});
+            return isIn;
         }
-        return false;
     }
 
     /*
@@ -86,20 +92,21 @@ public class CSPSolver {
     public boolean arcConsistency1() {
         this.setiSize(CSPSolver.getCSPSize(this.problemInstance));
 
-        nodeConsistency();
+        checkNodeConsistency();
 
         Set<Set<Variable>> directedArcs = this.problemInstance.variableConstraintMap.keySet();
         boolean change = false;
         do {
             change = false;
             for (Set<Variable> arc : directedArcs) {
-                assert arc.size() == 2;
                 List<Variable> arcArr = arc.stream().collect(Collectors.toList());
-                boolean updated = revise(arcArr.get(0), arcArr.get(1));
+                boolean updated1 = revise(arcArr.get(0), arcArr.get(1));
+                boolean updated2 = revise(arcArr.get(1), arcArr.get(0));
                 if (arcArr.get(0).currentDomain.values.size() == 0) {
+                    this.setfSize(null);
                     return false;
                 } else {
-                    change = updated || change;
+                    change = updated1 || updated2 || change;
                 }
             }
         } while (change);
@@ -108,8 +115,19 @@ public class CSPSolver {
         return true;
     }
 
-    public void nodeConsistency() {
+    public void checkNodeConsistency() {
+        for (Constraint constraint : this.problemInstance.mapOfConstraints.values()) {
+            if (constraint.scope.size() == 1) {
+                List<Integer> temp = new ArrayList<>(constraint.scope.get(0).currentDomain.values);
 
+                for (Integer i : temp) {
+                    if (!constraint.isSupportedBy(new int[]{i.intValue(), i.intValue()})) {
+                        constraint.scope.get(0).currentDomain.values.remove(i);
+                        fval += 1;
+                    }
+                }
+            }
+        }
     }
 
     public static double getCSPSize(ProblemInstance problemInstance) {
@@ -121,16 +139,14 @@ public class CSPSolver {
         return sumLn;
     }
 
-
     public String solverReport() {
         return "Instance name: " + problemInstance.name + "\n" +
                 "cc: " + this.getCc() + " \n" +
                 "cpu: " + this.getCpuTime() + "\n" +
                 "fval: " + this.getFval() + "\n" +
                 "iSize: " + this.getiSize() + "\n" +
-                "fSize: " + this.getfSize() + "\n" +
-                "fEffect: " + this.getfEffect() + "\n";
-
+                "fSize: " + ((this.getfSize() == null) ? "false" : this.getfSize())  + "\n" +
+                "fEffect: " + ((this.getfSize() == null) ? "false" : this.getfEffect()) + "\n";
     }
 
     public ProblemInstance getProblemInstance() {
@@ -173,11 +189,11 @@ public class CSPSolver {
         this.fval = fval;
     }
 
-    public double getfSize() {
+    public Double getfSize() {
         return fSize;
     }
 
-    public void setfSize(double fSize) {
+    public void setfSize(Double fSize) {
         this.fSize = fSize;
     }
 

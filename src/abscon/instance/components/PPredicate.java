@@ -8,7 +8,7 @@ public class PPredicate extends PFunction {
 		super(name, formalParametersExpression, functionalExpression);
 	}
 
-	public String toString() {
-		return "  predicate " + name + " with functional expression = " + functionalExpression + " and (universal) postfix expression = " + Toolkit.buildStringFromTokens(universalPostfixExpression);
-	}
+//	public String toString() {
+//		return "  predicate " + name + " with functional expression = " + functionalExpression + " and (universal) postfix expression = " + Toolkit.buildStringFromTokens(universalPostfixExpression);
+//	}
 }

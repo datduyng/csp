@@ -1,6 +1,8 @@
 # Generic Data Structures for Storing CSPs
 
+-----
 
+# Hw1
 ## File structure
 
 ```
@@ -53,5 +55,16 @@ presentationElement.getAttribute("name");
 - I ultilized a map for efficient look given a name of a field. this help mapping related neighbor and domain to a variable easier.
 
 
+-----
+## Hw2
 
+For parsing argument, I decided to use `CliArgs` class. A generic class that would parse command line token.
 
+Helper function such as:
+
+- `public boolean check(Variable vi, int vali , Variable vj, int valj)`
+- `public boolean supported(Variable vi, int vali, Variable vj)`
+- `public boolean revise(Variable vi, Variable vj)`
+- `public void checkNodeConsistency()`
+
+is implemented.

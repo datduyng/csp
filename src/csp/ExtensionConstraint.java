@@ -14,4 +14,20 @@ public class ExtensionConstraint extends Constraint {
                 ", variables: " + Variable.varsToString(new HashSet<>(scope)) +
                 ", definition: " + relation.semantics + " " + relation.tuplesToString() + "\n";
     }
+
+    @Override
+    public boolean isSupportedBy(int[] vals) {
+        for (int[] tup : this.relation.tuples) {
+            if (tup[0] == vals[0] && tup[1] == vals[1]) {
+                if (this.relation.semantics.equals("conflicts")) {
+                    return false;
+                }
+                return true;
+            }
+        }
+        if (this.relation.semantics.equals("conflicts")) {
+            return true;
+        }
+        return false;
+    }
 }

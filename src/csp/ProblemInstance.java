@@ -1,24 +1,27 @@
 package csp;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
 
 public class ProblemInstance {
     String name;
     Map<String, Variable> mapOfVariables;
     Map<String, Constraint> mapOfConstraints;
+    Map<Set<Variable>, Constraint> variableConstraintMap;
 
     public ProblemInstance() {
         mapOfVariables = new LinkedHashMap<>();
         mapOfConstraints = new LinkedHashMap<>();
+        variableConstraintMap = new HashMap<>();
     }
     public ProblemInstance(String name,
                            Map<String, Variable> mapOfVariables,
-                           Map<String, Constraint> mapOfConstraints) {
+                           Map<String, Constraint> mapOfConstraints,
+                           Map<LinkedHashSet<Variable>, Constraint> variableConstraintMap) {
         this();
         this.name = name;
         this.mapOfVariables.putAll(mapOfVariables);
         this.mapOfConstraints.putAll(mapOfConstraints);
+        this.variableConstraintMap.putAll(variableConstraintMap);
     }
     public String mapOfVariablesToString() {
         StringBuilder sb = new StringBuilder();

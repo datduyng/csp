@@ -18,4 +18,5 @@ public abstract class Constraint {
     }
 
     public abstract String toFullString();
+    public abstract boolean isSupportedBy(int[] vals);
 }
