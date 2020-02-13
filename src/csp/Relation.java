@@ -18,6 +18,9 @@ public class Relation {
     }
 
     public static String arr2Str(int[] arr) {
+        if (arr.length == 1) {
+            return "( " + arr[0] + ")";
+        }
         return "(" + arr[0] + "," + arr[1] + ")";
     }
     public String tuplesToString() {

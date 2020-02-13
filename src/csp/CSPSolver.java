@@ -1,7 +1,5 @@
 package csp;
 
-import utils.Logger;
-
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -62,7 +60,7 @@ public class CSPSolver {
             }
         }
 
-        return support; // false. most likely
+        return support; // false.
     }
 
 
