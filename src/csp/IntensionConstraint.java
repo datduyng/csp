@@ -4,7 +4,6 @@ package csp;
 import abscon.instance.components.PFunction;
 import abscon.instance.components.PPredicate;
 import abscon.instance.intension.EvaluationManager;
-import utils.Logger;
 
 import java.util.HashSet;
 import java.util.List;

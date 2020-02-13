@@ -3,7 +3,7 @@ package csp;
 import abscon.instance.components.*;
 import abscon.instance.tools.InstanceParser;
 import utils.CliArgs;
-import utils.Logger;
+import utils.LOG;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -85,6 +85,21 @@ public class MyParser {
 
                 constraint = new ExtensionConstraint(
                         pExConstraint.getName(), pExConstraint.getArity(), scope, relation
+                );
+            } else if (entry.getValue() instanceof PAllDifferent) {
+                PConstraint pCon = entry.getValue();
+
+                Arrays.stream(pCon.getScope()).forEach(
+                        (pvar) -> scope.add(this.mapOfVariables.get(pvar.getName()))
+                );
+
+                for (int i=0; i<scope.size(); i++) {
+                    Set<Variable> t = addNeighbor(scope.get(i), scope);
+                    scope.get(i).neighbors.addAll(t);
+                }
+
+                constraint = new AllDifferentConstraint(
+                        pCon, pCon.getName(), pCon.getArity(), scope
                 );
             } else {
                 PIntensionConstraint pInConstraint = (PIntensionConstraint) entry.getValue();
@@ -173,16 +188,16 @@ public class MyParser {
         boolean showInfo = cliArgs.switchPresent("-info");
 
         if (file == null || acType == null) {
-            Logger.error("Usage: -f <filename> -a [ac1 | ac3] [-info]");
+            LOG.error("Usage: -f <filename> -a [ac1 | ac3] [-info]");
             return;
         }
 
         MyParser parser = new MyParser(file);
         ProblemInstance pi = parser.parse();
         if (showInfo) {
-            Logger.info("Problem info: \n");
-            Logger.stdout(pi.toString());
-            Logger.stdout("\n");
+            LOG.info("Problem info: \n");
+            LOG.stdout(pi.toString());
+            LOG.stdout("\n");
         }
 
 
@@ -190,9 +205,12 @@ public class MyParser {
 
         if (acType.equals("ac1")) {
             boolean correct = cspSolver.arcConsistency1();
-            Logger.stdout(cspSolver.solverReport());
+            LOG.stdout(cspSolver.solverReport());
+        } else if (acType.equals("ac3")) {
+            boolean correct = cspSolver.arcConsistency3();
+            LOG.stdout(cspSolver.solverReport());
         } else {
-            Logger.info("Not yet implemented");
+            LOG.info("Not yet implemented");
         }
 
     }

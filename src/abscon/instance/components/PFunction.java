@@ -1,10 +1,6 @@
 package abscon.instance.components;
 
-import abscon.instance.Toolkit;
 import abscon.instance.intension.PredicateManager;
-import utils.Logger;
-
-import java.util.Arrays;
 
 public class PFunction {
 
