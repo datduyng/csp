@@ -97,6 +97,7 @@ public class CSPSolver {
         do {
             change = false;
             for (Set<Variable> arc : directedArcs) {
+                if (arc.size() == 1) { continue; }
                 List<Variable> arcArr = arc.stream().collect(Collectors.toList());
                 boolean updated1 = revise(arcArr.get(0), arcArr.get(1));
                 boolean updated2 = revise(arcArr.get(1), arcArr.get(0));
