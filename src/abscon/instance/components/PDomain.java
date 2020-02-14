@@ -1,6 +1,8 @@
 package abscon.instance.components;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import abscon.instance.InstanceTokens;
 
@@ -17,6 +19,8 @@ public class PDomain {
 		return values;
 	}
 
+	public List<Integer> currentVals;
+
 	public int getMaxAbsoluteValue() {
 		return Math.max(Math.abs(values[0]), Math.abs(values[values.length - 1]));
 	}
@@ -24,10 +28,16 @@ public class PDomain {
 	public PDomain(String name, int[] values) {
 		this.name = name;
 		this.values = values;
+		this.currentVals = new ArrayList<>();
+		for (int val : values) { this.currentVals.add(val); }
 	}
 
 	public boolean contains(int value) {
 		return Arrays.binarySearch(values, value) >= 0;
+	}
+
+	public void removeCurrentValByVal(Integer val) {
+		this.currentVals.removeIf( _val -> _val.equals(val));
 	}
 
 	public String toString() {

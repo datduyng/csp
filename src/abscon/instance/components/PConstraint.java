@@ -32,6 +32,10 @@ public abstract class PConstraint {
 	 */
 	public abstract long computeCostOf(int[] tuple);
 
+	public boolean isSupportedBy(int[] tuple) {
+		return computeCostOf(tuple) == 0;
+	}
+
 	public String toString() {
 		String s = "  constraint " + name + " with arity = " + scope.length + ", scope = ";
 		s += scope[0].getName();

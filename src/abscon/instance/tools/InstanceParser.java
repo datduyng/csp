@@ -1,10 +1,7 @@
 package abscon.instance.tools;
 
-import java.util.List;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.StringTokenizer;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -90,6 +87,13 @@ public class InstanceParser {
 
 	public PVariable[] getVariables() {
 		return variables;
+	}
+
+	public List<PVariable> getVariablesAsList() {
+		return Arrays.stream(variables).collect(Collectors.toList());
+	}
+	public List<PConstraint> getConstraintsAsList() {
+		return this.mapOfConstraints.values().stream().collect(Collectors.toList());
 	}
 
 	public int getMaxConstraintArity() {

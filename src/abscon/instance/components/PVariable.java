@@ -1,6 +1,8 @@
 package abscon.instance.components;
 
 
+import csp.old.Variable;
+
 public class PVariable {
 	private String name;
 
@@ -17,6 +19,23 @@ public class PVariable {
 	public PVariable(String name, PDomain domain) {
 		this.name = name;
 		this.domain = domain;
+	}
+
+	@Override
+	public boolean equals(Object o) {
+		if (o == null) { return false; }
+		if (this == o) { return true; }
+
+		// instanceof Check and actual value check
+		if ((o instanceof PVariable) && (((PVariable) o).name.equals(this.name))) {
+			return true;
+		}
+		return false;
+	}
+
+	@Override
+	public int hashCode() {
+		return this.name.hashCode();
 	}
 
 	public String toString() {
