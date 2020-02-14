@@ -84,7 +84,9 @@ public class MyParser {
                 }
 
                 constraint = new ExtensionConstraint(
-                        pExConstraint.getName(), pExConstraint.getArity(), scope, relation
+                        entry.getValue(),
+                        pExConstraint.getName(),
+                        pExConstraint.getArity(), scope, relation
                 );
             } else if (entry.getValue() instanceof PAllDifferent) {
                 PConstraint pCon = entry.getValue();
@@ -114,6 +116,7 @@ public class MyParser {
                 }
 
                 constraint = new IntensionConstraint(
+                        entry.getValue(),
                         pInConstraint.getName(), pInConstraint.getArity(), scope,
                         pInConstraint.getEffectiveParametersExpression(),
                         pInConstraint.getFunction(), pInConstraint.getUniversalPostfixExpression()
@@ -179,16 +182,26 @@ public class MyParser {
         return  "mapOfVariables: \n" + mapOfVariablesToString() + "" +
                 "mapOfConstraints \n" + mapOfConstraintToString() + "\n";
     }
-
-    public static void main(String[] args) {
+    public static void main(String[] args){
         CliArgs cliArgs = new CliArgs(args);
 
         String file = cliArgs.switchValue("-f", null);
         String acType = cliArgs.switchValue("-a", null);
+        String printReport = cliArgs.switchValue("-print-report", null);
         boolean showInfo = cliArgs.switchPresent("-info");
 
-        if (file == null || acType == null) {
-            LOG.error("Usage: -f <filename> -a [ac1 | ac3] [-info]");
+        if (printReport != null) {
+            LOG.info("Printing report");
+            try {
+                AcReport.writeToXLS(printReport);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return;
+        }
+
+        if (file == null || acType == null)  {
+            LOG.error("Usage: [-f <filename> -a [ac1 | ac3] [-info]] [-print-report]");
             return;
         }
 
