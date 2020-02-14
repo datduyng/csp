@@ -1,9 +1,7 @@
-package csp;
+package csp.old;
 
 import java.util.*;
 import java.util.stream.Collectors;
-
-import static csp.Variable.varsToString;
 
 public class Variable {
     String name;

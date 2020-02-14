@@ -1,10 +1,8 @@
-package csp;
+package csp.old;
 
 
 import abscon.instance.components.PConstraint;
 import abscon.instance.components.PFunction;
-import abscon.instance.components.PPredicate;
-import abscon.instance.intension.EvaluationManager;
 
 import java.util.HashSet;
 import java.util.List;

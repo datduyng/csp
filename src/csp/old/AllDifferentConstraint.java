@@ -1,6 +1,5 @@
-package csp;
+package csp.old;
 
-import abscon.instance.components.PAllDifferent;
 import abscon.instance.components.PConstraint;
 
 import java.util.List;

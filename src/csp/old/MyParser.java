@@ -1,4 +1,4 @@
-package csp;
+package csp.old;
 
 import abscon.instance.components.*;
 import abscon.instance.tools.InstanceParser;
@@ -14,7 +14,7 @@ public class MyParser {
     private Map<String, Variable> mapOfVariables;
     private Map<String, Relation> mapOfRelations;
     private Map<String, Constraint> mapOfConstraints;
-    private Map<LinkedHashSet<Variable>, Constraint> variableConstraintMap;
+    private Map<LinkedHashSet<Variable>, List<Constraint>> variableConstraintMap;
     InstanceParser parser;
     public MyParser() {
         variables = new ArrayList<>();
@@ -124,9 +124,13 @@ public class MyParser {
 
             }
 
-            this.variableConstraintMap.put(
-                    new LinkedHashSet<>(constraint.scope), constraint
-            );
+            if (this.variableConstraintMap.containsKey(
+                    new HashSet<>(constraint.scope))) {
+                this.variableConstraintMap.get(new LinkedHashSet<>(constraint.scope)).add(constraint);
+            } else {
+                this.variableConstraintMap.put(
+                        new LinkedHashSet<>(constraint.scope), new ArrayList<>(Arrays.asList(constraint)));
+            }
 
             this.mapOfConstraints.put(entry.getKey(), constraint);
             // reference constraint to its variable
@@ -190,15 +194,15 @@ public class MyParser {
         String printReport = cliArgs.switchValue("-print-report", null);
         boolean showInfo = cliArgs.switchPresent("-info");
 
-        if (printReport != null) {
-            LOG.info("Printing report");
-            try {
-                AcReport.writeToXLS(printReport);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            return;
-        }
+//        if (printReport != null) {
+//            LOG.info("Printing report");
+//            try {
+//                AcReport.writeToXLS(printReport);
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//            }
+//            return;
+//        }
 
         if (file == null || acType == null)  {
             LOG.error("Usage: [-f <filename> -a [ac1 | ac3] [-info]] [-print-report]");

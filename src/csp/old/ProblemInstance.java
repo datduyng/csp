@@ -1,4 +1,4 @@
-package csp;
+package csp.old;
 
 import java.util.*;
 
@@ -6,7 +6,7 @@ public class ProblemInstance {
     String name;
     Map<String, Variable> mapOfVariables;
     Map<String, Constraint> mapOfConstraints;
-    Map<LinkedHashSet<Variable>, Constraint> variableConstraintMap;
+    Map<LinkedHashSet<Variable>, List<Constraint>> variableConstraintMap;
 
     public ProblemInstance() {
         mapOfVariables = new LinkedHashMap<>();
@@ -16,7 +16,7 @@ public class ProblemInstance {
     public ProblemInstance(String name,
                            Map<String, Variable> mapOfVariables,
                            Map<String, Constraint> mapOfConstraints,
-                           Map<LinkedHashSet<Variable>, Constraint> variableConstraintMap) {
+                           Map<LinkedHashSet<Variable>, List<Constraint>> variableConstraintMap) {
         this();
         this.name = name;
         this.mapOfVariables.putAll(mapOfVariables);

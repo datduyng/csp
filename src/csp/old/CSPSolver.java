@@ -1,4 +1,4 @@
-package csp;
+package csp.old;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
@@ -30,19 +30,41 @@ public class CSPSolver {
      * Verifies where a constraint exist between Vi and Vj. or
      * If (vali, valj) in R_{Vi, Vj} if support
      */
+//    public boolean check(Variable vi, int vali , Variable vj, int valj) {
+//        if (!problemInstance.variableConstraintMap.containsKey(
+//                new LinkedHashSet<>(Arrays.asList(vi, vj)) )) {
+//            //constraint does not exist;
+//            return true; // universal constraint
+//        }
+//        this.cc += 1;
+//        if (vi.neighbors.contains(vj)) {
+//            Constraint constraint = problemInstance.variableConstraintMap
+//                    .get(new LinkedHashSet<>(Arrays.asList(vi, vj)));
+//            return constraint.isSupportedBy(new int[]{vali, valj});
+//        }
+//        return true;
+//    }
+
     public boolean check(Variable vi, int vali , Variable vj, int valj) {
         if (!problemInstance.variableConstraintMap.containsKey(
-                new LinkedHashSet<>(Arrays.asList(vi, vj)) )) {
+                new LinkedHashSet<>(Arrays.asList(vi, vj)))) {
             //constraint does not exist;
             return true; // universal constraint
         }
-        this.cc += 1;
+        boolean isSupported = true;
         if (vi.neighbors.contains(vj)) {
-            Constraint constraint = problemInstance.variableConstraintMap
+            List<Constraint> constraints = problemInstance.variableConstraintMap
                     .get(new LinkedHashSet<>(Arrays.asList(vi, vj)));
-            return constraint.isSupportedBy(new int[]{vali, valj});
+
+
+            for (Constraint con : constraints) {
+                isSupported = isSupported && con.isSupportedBy(new int[]{vali, valj});
+                this.cc += 1;
+            }
+        } else {
+            this.cc++;
         }
-        return true;
+        return isSupported;
     }
 
     /*
@@ -141,11 +163,15 @@ public class CSPSolver {
 
         checkNodeConsistency();
         long tic = this.getCpuTimeInNano();
-        Set<LinkedHashSet<Variable>> directedArcs = this.problemInstance.variableConstraintMap.keySet();
+//        Set<LinkedHashSet<Variable>> directedArcs = this.problemInstance.variableConstraintMap.keySet();
+        List<List<Variable>> arcs = this.problemInstance.mapOfConstraints.values().stream().map((con) -> {
+            return new ArrayList<>(con.scope);
+        }).collect(Collectors.toList());
+
         boolean change = false;
         do {
             change = false;
-            for (LinkedHashSet<Variable> arc : directedArcs) {
+            for (List<Variable> arc : arcs) {
                 List<Variable> _arc = arc.stream().collect(Collectors.toList());
                 if (_arc.size() == 1) { continue; }
                 boolean updated1 = revise(_arc.get(0), _arc.get(1));
