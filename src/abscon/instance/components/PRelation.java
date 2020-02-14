@@ -51,8 +51,8 @@ public class PRelation {
 	public int computeCostOf(int[] tuple) {
 		int position = Arrays.binarySearch(tuples, tuple, Toolkit.lexicographicComparator);
 		if (semantics.equals(InstanceTokens.SUPPORTS))
-			return position >= 0 ? 0 : 1;
-		return position >= 0 ? 1 : 0;
+			return position >= 0 ? 0 : 1; //0 == true
+		return position >= 0 ? 1 : 0; // 1 == false
 	}
 
 	public String toString() {

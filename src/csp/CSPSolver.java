@@ -1,12 +1,14 @@
 package csp;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadMXBean;
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class CSPSolver {
     private ProblemInstance problemInstance;
     private long timeSetup;
-    private long cpuTime;
+    private double cpuTime;
     private long cc;
     private long fval;
 
@@ -30,37 +32,29 @@ public class CSPSolver {
      */
     public boolean check(Variable vi, int vali , Variable vj, int valj) {
         if (!problemInstance.variableConstraintMap.containsKey(
-                new HashSet<>(Arrays.asList(vi, vj))
-        )) {
+                new LinkedHashSet<>(Arrays.asList(vi, vj)) )) {
             //constraint does not exist;
             return true; // universal constraint
         }
         this.cc += 1;
-        Constraint constraint = problemInstance.variableConstraintMap
-                    .get(new HashSet<>(Arrays.asList(vi, vj)));
-        if (constraint instanceof ExtensionConstraint) {
-            ExtensionConstraint exCon = (ExtensionConstraint) constraint;
-            boolean isIn = exCon.isSupportedBy(new int[]{vali, valj});
-            return isIn;
-        } else {
-            boolean isIn = constraint.isSupportedBy(new int[]{vali, valj});
-            return isIn;
+        if (vi.neighbors.contains(vj)) {
+            Constraint constraint = problemInstance.variableConstraintMap
+                    .get(new LinkedHashSet<>(Arrays.asList(vi, vj)));
+            return constraint.isSupportedBy(new int[]{vali, valj});
         }
+        return true;
     }
 
     /*
      * Verifies that ⟨Vi,a⟩ has at least one support in C_{Vi,Vj}
      */
     public boolean supported(Variable vi, int vali, Variable vj) {
-        boolean support = false;
-        for (int valj : vj.currentDomain.values) {
-            if (check(vi, vali, vj, valj)) {
-                support = true;
-                return support;
-            }
+        List<Integer> vals = new ArrayList<>(vj.currentDomain.values);
+        for (int valj : vals) {
+            if (check(vi, vali, vj, valj)) { return true; }
         }
 
-        return support; // false.
+        return false;
     }
 
 
@@ -83,31 +77,96 @@ public class CSPSolver {
             }
         }
         return revised;
+
+//        boolean revised = false;
+//        List<Integer> originalDomainVals = new ArrayList<>(vi.currentDomain.values);
+//        for (Integer viVal : originalDomainVals) {
+//            if (supported(vi, viVal, vj)) {
+//                revised = true;
+//                this.fval += 1;
+//                vi.currentDomain.values.remove(viVal);
+//            }
+//        }
+//        return revised;
+    }
+
+    public boolean arcConsistency3() {
+        this.setiSize(CSPSolver.getCSPSize(this.problemInstance));
+        checkNodeConsistency();
+
+        long tic = this.getCpuTimeInNano();
+        Queue<List<Variable>> queue = new LinkedList<>();
+        for (LinkedHashSet<Variable> vpair : this.problemInstance.variableConstraintMap.keySet()) {
+            List<Variable> _vpair = vpair.stream().collect(Collectors.toList());
+            if (vpair.size() == 1) { continue; }
+            queue.offer(new ArrayList<>(Arrays.asList(
+                    _vpair.get(0), _vpair.get(1)
+            )));
+            queue.offer(new ArrayList<>(Arrays.asList(
+                    _vpair.get(1), _vpair.get(0)
+            )));
+        }
+
+        while (!queue.isEmpty()) {
+            List<Variable> vpair = queue.poll();
+            if (vpair.size() == 1) { continue; }
+            boolean updated = revise(vpair.get(0), vpair.get(1));
+
+            if (updated) {
+                for (Variable neigh : vpair.get(0).neighbors) {
+                    if (neigh.equals(vpair.get(1))) { continue; }
+                    queue.offer(new ArrayList<>(Arrays.asList(
+                            neigh, vpair.get(0)
+                    )));
+                }
+            }
+
+            //check for domain wipe out
+            if (vpair.get(0).currentDomain.values.size() == 0 ||
+                vpair.get(1).currentDomain.values.size() == 0) {
+                this.setfSize(null);
+                long toc = this.getCpuTimeInNano();
+                this.setCpuTime((double) (toc - tic));
+                return false;
+            }
+        }
+        long toc = this.getCpuTimeInNano();
+        this.setCpuTime((double) (toc - tic) );
+        this.setfSize(CSPSolver.getCSPSize(this.problemInstance));
+        return true;
     }
 
     public boolean arcConsistency1() {
         this.setiSize(CSPSolver.getCSPSize(this.problemInstance));
 
         checkNodeConsistency();
-
-        Set<Set<Variable>> directedArcs = this.problemInstance.variableConstraintMap.keySet();
+        long tic = this.getCpuTimeInNano();
+        Set<LinkedHashSet<Variable>> directedArcs = this.problemInstance.variableConstraintMap.keySet();
         boolean change = false;
         do {
             change = false;
-            for (Set<Variable> arc : directedArcs) {
-                if (arc.size() == 1) { continue; }
-                List<Variable> arcArr = arc.stream().collect(Collectors.toList());
-                boolean updated1 = revise(arcArr.get(0), arcArr.get(1));
-                boolean updated2 = revise(arcArr.get(1), arcArr.get(0));
-                if (arcArr.get(0).currentDomain.values.size() == 0) {
+            for (LinkedHashSet<Variable> arc : directedArcs) {
+                List<Variable> _arc = arc.stream().collect(Collectors.toList());
+                if (_arc.size() == 1) { continue; }
+                boolean updated1 = revise(_arc.get(0), _arc.get(1));
+                if (_arc.get(0).currentDomain.values.size() == 0) {
                     this.setfSize(null);
+                    this.setCpuTime((double) (this.getCpuTimeInNano() - tic));
                     return false;
-                } else {
-                    change = updated1 || updated2 || change;
                 }
+
+                boolean updated2 = revise(_arc.get(1), _arc.get(0));
+                if (_arc.get(1).currentDomain.values.size() == 0) {
+                    this.setfSize(null);
+                    this.setCpuTime((double) (this.getCpuTimeInNano() - tic));
+                    return false;
+                }
+
+                change = updated1 || updated2 || change;
+
             }
         } while (change);
-
+        this.setCpuTime((double) (this.getCpuTimeInNano() - tic));
         this.setfSize(CSPSolver.getCSPSize(this.problemInstance));
         return true;
     }
@@ -126,6 +185,13 @@ public class CSPSolver {
             }
         }
     }
+    /** Get CPU time in nanoseconds. */
+    public long getCpuTimeInNano() {
+        ThreadMXBean bean = ManagementFactory.getThreadMXBean();
+        return bean.isCurrentThreadCpuTimeSupported( ) ?
+                bean.getCurrentThreadCpuTime() : 0L;
+    }
+
 
     public static double getCSPSize(ProblemInstance problemInstance) {
         List<Variable> vars = new ArrayList<>(problemInstance.mapOfVariables.values());
@@ -136,10 +202,11 @@ public class CSPSolver {
         return sumLn;
     }
 
+
     public String solverReport() {
         return "Instance name: " + problemInstance.name + "\n" +
                 "cc: " + this.getCc() + " \n" +
-                "cpu: " + this.getCpuTime() + "\n" +
+                "cpu: " + this.getCpuTime() + "ms\n" +
                 "fval: " + this.getFval() + "\n" +
                 "iSize: " + this.getiSize() + "\n" +
                 "fSize: " + ((this.getfSize() == null) ? "false" : this.getfSize())  + "\n" +
@@ -162,11 +229,11 @@ public class CSPSolver {
         this.timeSetup = timeSetup;
     }
 
-    public long getCpuTime() {
-        return cpuTime;
+    public double getCpuTime() {
+        return this.cpuTime/1000000.0;
     }
 
-    public void setCpuTime(long cpuTime) {
+    public void setCpuTime(double cpuTime) {
         this.cpuTime = cpuTime;
     }
 
