@@ -6,7 +6,7 @@ public class ProblemInstance {
     String name;
     Map<String, Variable> mapOfVariables;
     Map<String, Constraint> mapOfConstraints;
-    Map<Set<Variable>, Constraint> variableConstraintMap;
+    Map<LinkedHashSet<Variable>, Constraint> variableConstraintMap;
 
     public ProblemInstance() {
         mapOfVariables = new LinkedHashMap<>();
