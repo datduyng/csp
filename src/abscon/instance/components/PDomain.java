@@ -21,15 +21,16 @@ public class PDomain {
 
 	public List<Integer> currentVals;
 
-	public int getMaxAbsoluteValue() {
-		return Math.max(Math.abs(values[0]), Math.abs(values[values.length - 1]));
-	}
 
 	public PDomain(String name, int[] values) {
 		this.name = name;
 		this.values = values;
 		this.currentVals = new ArrayList<>();
 		for (int val : values) { this.currentVals.add(val); }
+	}
+
+	public int getMaxAbsoluteValue() {
+		return Math.max(Math.abs(values[0]), Math.abs(values[values.length - 1]));
 	}
 
 	public boolean contains(int value) {
@@ -82,5 +83,9 @@ public class PDomain {
 				return false;
 		return true;
 	}
-	
+
+	public static PDomain deepCopy(PDomain dom) {
+		return new PDomain(
+				dom.name, dom.values);
+	}
 }

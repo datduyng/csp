@@ -1,17 +1,16 @@
 package csp.main;
 
-import abscon.instance.components.PConstraint;
-import abscon.instance.components.PVariable;
-import csp.old.ProblemInstance;
-import csp.old.Variable;
-import utils.LOG;
-
-import java.lang.management.ManagementFactory;
-import java.lang.management.ThreadMXBean;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
+
+import abscon.instance.components.PConstraint;
+import abscon.instance.components.PVariable;
+
+import utils.LOG;
+import utils.Utils;
+
+
 
 public class ArcConsistency {
     List<PVariable> variables;
@@ -46,34 +45,30 @@ public class ArcConsistency {
         this.iSize = getCSPSize(this.variables);
         keepNodeConsistent();
 
-        long tic = getCpuTimeInNano();
+        long tic = Utils.getCpuTimeInNano();
 
         boolean change = false;
-        boolean wipedOut = false;
         do {
             change = false;
             for (PConstraint con : constraints) {
                 if (con.getArity() == 1) { continue; }
                 boolean updated = checkSupportedAndRevise(
-                        con.getScope()[0], con.getScope()[1]);
-                if (con.getScope()[0].getDomain().currentVals.size() == 0) {
-                    this.fSize = null;
-                    this.cpu = getCpuTimeInNano() - tic;
-                    return false;
-                }
+                        con.getScope()[0], con.getScope()[1], false);
                 boolean updatedReverse = checkSupportedAndRevise(
-                        con.getScope()[1], con.getScope()[0]);
-                if (con.getScope()[1].getDomain().currentVals.size() == 0) {
+                        con.getScope()[1], con.getScope()[0], true);
+
+                if (con.getScope()[0].currentDomain.currentVals.size() == 0) {
                     this.fSize = null;
-                    this.cpu = getCpuTimeInNano() - tic;
+                    this.cpu = Utils.getCpuTimeInNano() - tic;
                     return false;
                 }
+
                 change = updated || updatedReverse || change;
             }
         } while (change);
 
         this.fSize = getCSPSize(this.variables);
-        this.cpu = getCpuTimeInNano() - tic;
+        this.cpu = Utils.getCpuTimeInNano() - tic;
         return true;
     }
 
@@ -82,55 +77,60 @@ public class ArcConsistency {
             if (con.getScope().length != 1) { continue; }
 
             List<Integer> domainVals = new ArrayList<>(
-                    con.getScope()[0].getDomain().currentVals);
+                    con.getScope()[0].currentDomain.currentVals);
             for (Integer vali : domainVals) {
                 if (!con.isSupportedBy(new int[]{vali, vali})) {
-                    con.getScope()[0].getDomain().removeCurrentValByVal(vali);
+                    con.getScope()[0].currentDomain.removeCurrentValByVal(vali);
                     this.fval++;
                 }
             }
         }
     }
 
-    public boolean checkSupportedAndRevise(PVariable vi, PVariable vj) {
-        List<Integer> viVals = new ArrayList<>(vi.getDomain().currentVals);
+    public boolean checkSupportedAndRevise(PVariable vi, PVariable vj, boolean reversed) {
+        List<Integer> viVals = new ArrayList<>(vi.currentDomain.currentVals);
         boolean revised = false;
         for (Integer viVal : viVals) {
-            if (supported(vi, viVal, vj)) {
+            if (!supported(vi, viVal, vj, reversed)) {
                 revised = true;
                 this.fval+=1;
-                vi.getDomain().removeCurrentValByVal(viVal);
+                vi.currentDomain.removeCurrentValByVal(viVal);
             }
         }
         return revised;
     }
 
-    public boolean supported(PVariable vi, Integer viVal, PVariable vj) {
-        for (Integer vjVal : vj.getDomain().currentVals) {
-            boolean ch = check(vi, viVal, vj, vjVal);
-            LOG.stdout("check " +vi.getName() + ","+vj.getName() + " Val: "+ "(" +viVal + "," +vjVal+")" +" checked res: "+ ch);
-            if (ch) {
+    public boolean supported(PVariable vi, Integer viVal, PVariable vj, boolean reversed) {
+        List<Integer> vjVals = new ArrayList<>(vj.currentDomain.currentVals);
+        for (Integer vjVal : vjVals) {
+            if (check(vi, viVal, vj, vjVal, reversed)) {
                 return true;
             }
         }
         return false;
     }
 
-    public boolean check(PVariable vi, Integer viVal, PVariable vj, Integer vjVal) {
-        PConstraint con = findConstraintByScope(
-                new ArrayList<>(Arrays.asList(vi, vj)));
+    public boolean check(PVariable vi, Integer viVal, PVariable vj, Integer vjVal, boolean reversed) {
+        PConstraint con;
+        if (reversed) {
+            con = findConstraintByScope(
+                    new ArrayList<>(Arrays.asList(vj, vi)));
+        } else {
+            con = findConstraintByScope(
+                    new ArrayList<>(Arrays.asList(vi, vj)));
+        }
         if (con == null) { return true; } //universal constraint
 
+
         this.cc ++;
-        long val = con.computeCostOf(new int[]{viVal, vjVal});
-        return val == 0;
+        return reversed ?
+                con.computeCostOf(new int[]{vjVal, viVal}) == 0 :
+                con.computeCostOf(new int[]{viVal, vjVal}) == 0;
     }
 
     public PConstraint findConstraintByScope(List<PVariable> scope) {
         for (PConstraint con : this.constraints) {
-            if (Arr2List(con.getScope()).equals(scope)) {
-                return con;
-            }
+            if (Utils.Arr2List(con.getScope()).equals(scope)) { return con; }
         }
         return null;
     }
@@ -155,27 +155,23 @@ public class ArcConsistency {
     public String getVarsDomain() {
         String res = "Variables domains: \n";
         for (PVariable var : this.variables) {
-            res += var.getName() + ": " + var.getDomain().currentVals.toString() + "\n";
+            res += var.getName() + ": " + var.currentDomain.currentVals.toString() + "\n";
         }
         return res;
     }
-    public static <G> List<G> Arr2List(G[] vars) {
-        return Arrays.stream(vars).collect(Collectors.toList());
-    }
-
 
     public static double getCSPSize(List<PVariable> vars) {
         double sumLn = 0.;
         for (PVariable var : vars) {
-            sumLn += Math.log(var.getDomain().currentVals.size() + 0.);
+            sumLn += Math.log(var.currentDomain.currentVals.size() + 0.);
         }
         return sumLn;
     }
-    public static long getCpuTimeInNano() {
-        ThreadMXBean bean = ManagementFactory.getThreadMXBean();
-        return bean.isCurrentThreadCpuTimeSupported( ) ?
-                bean.getCurrentThreadCpuTime() : 0L;
+
+    public void printEndingInfo() {
+        LOG.stdout("=========");
+        for (PVariable var : this.variables) {
+            LOG.stdout(var.toString());
+        }
     }
-
-
 }
