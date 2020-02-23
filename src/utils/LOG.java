@@ -1,7 +1,8 @@
 package utils;
 
 public class LOG {
-    public LOG(){ }
+    public boolean debug;
+    public LOG(boolean debug){ this.debug = debug; }
     public static void info(String s) {
         System.out.println("Info: " + s);
     }
@@ -11,4 +12,8 @@ public class LOG {
     }
 
     public static void stdout(String s) { System.out.println(s); }
+
+    public void debug(String s) {
+        if (this.debug) { LOG.stdout("|debug| " + s); }
+    }
 }

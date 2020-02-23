@@ -492,6 +492,14 @@ public class InstanceParser {
 		}
 	}
 
+	public void populateVariablesNeighborsReferences() {
+
+	}
+
+	public void populateVariablesConstraintReferences() {
+
+	}
+
 	/**
 	 * Parse the DOM object that has been loaded.
 	 * 
@@ -506,6 +514,9 @@ public class InstanceParser {
 		parseFunctions((Element) document.getDocumentElement().getElementsByTagName(InstanceTokens.FUNCTIONS).item(0));
 		parsePredicates((Element) document.getDocumentElement().getElementsByTagName(InstanceTokens.PREDICATES).item(0));
 		parseConstraints((Element) document.getDocumentElement().getElementsByTagName(InstanceTokens.CONSTRAINTS).item(0));
+
+		populateVariablesNeighborsReferences();
+		populateVariablesConstraintReferences();
 	}
 
 	public static void main(String[] args) {

@@ -1,12 +1,17 @@
 package abscon.instance.components;
 
-
-import csp.old.Variable;
+import java.util.Set;
 
 public class PVariable {
 	private String name;
 
 	private PDomain domain;
+
+	public PDomain currentDomain;
+
+	public Set<PVariable> neighbors;
+
+	public Set<PConstraint> constraints;
 
 	public String getName() {
 		return name;
@@ -19,8 +24,12 @@ public class PVariable {
 	public PVariable(String name, PDomain domain) {
 		this.name = name;
 		this.domain = domain;
+		this.currentDomain = PDomain.deepCopy(domain);
 	}
 
+	public void resetCurrentDomain() {
+		this.currentDomain = PDomain.deepCopy(this.domain);
+	}
 	@Override
 	public boolean equals(Object o) {
 		if (o == null) { return false; }
@@ -39,6 +48,6 @@ public class PVariable {
 	}
 
 	public String toString() {
-		return "  variable " + name + " with associated domain " + domain.getName();
+		return "  variable " + name + " with modified domain " + currentDomain.toString();
 	}
 }

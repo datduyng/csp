@@ -130,7 +130,7 @@ public class ArcConsistency {
 
     public PConstraint findConstraintByScope(List<PVariable> scope) {
         for (PConstraint con : this.constraints) {
-            if (Utils.Arr2List(con.getScope()).equals(scope)) { return con; }
+            if (Utils.arr2List(con.getScope()).equals(scope)) { return con; }
         }
         return null;
     }

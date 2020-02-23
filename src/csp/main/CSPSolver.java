@@ -5,14 +5,20 @@ import utils.CliArgs;
 import utils.LOG;
 
 public class CSPSolver {
-    public static String USAGE = "==";
+    public static String USAGE =
+            "./runProgram.sh -f {file_name}" +
+                    " [-a {ac1 | ac3}] " +
+                    " [-s {BT}]";
     public static void main(String[] args) {
 
         CliArgs cliArgs = new CliArgs(args);
 
         String file = cliArgs.switchValue("-f", null);
-        String acType = cliArgs.switchValue("-a", null);
+        String acType = cliArgs.switchValue("-a", "");
         String printReport = cliArgs.switchValue("-print-report", null);
+        String backtrack = cliArgs.switchValue("-s", "");
+        String orderingHeuristic = cliArgs.switchValue("-u", "");
+
         boolean showInfo = cliArgs.switchPresent("-info");
 
         InstanceParser parser = new InstanceParser();
@@ -42,5 +48,16 @@ public class CSPSolver {
             );
 
         }
+
+        if (backtrack.equals("BT")) {
+            BackTracking BT = new BackTracking(
+                    parser.getPresentationName(),
+                    parser.getVariablesAsList(),
+                    parser.getConstraintsAsList()
+            );
+            BT.bcssp();
+        }
+
+
     }
 }

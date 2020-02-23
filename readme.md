@@ -68,3 +68,19 @@ Helper function such as:
 - `public void checkNodeConsistency()`
 
 is implemented.
+
+
+-----
+## Hw3
+
+Helper function below has been implemented
+
+- `private int btLabel(int varIndex)`
+- `public boolean is2VariableConsistent(PVariable vi, PVariable vj)`
+- `public boolean supported(PVariable vi, Integer viVal, PVariable vj)`
+- `public boolean check(PVariable vari, Integer vali,
+                            PVariable varj, Integer valj)`
+- `public List<PConstraint> findConstraintByScope(List<PVariable> scope)`
+
+
+
