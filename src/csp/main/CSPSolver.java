@@ -49,12 +49,18 @@ public class CSPSolver {
 
         }
 
+
         if (backtrack.equals("BT")) {
             BackTracking BT = new BackTracking(
                     parser.getPresentationName(),
                     parser.getVariablesAsList(),
                     parser.getConstraintsAsList()
             );
+
+            if (!orderingHeuristic.equals("")) {
+                BT.preOrderVariableOrValue(orderingHeuristic);
+            }
+
             BT.bcssp();
         }
 

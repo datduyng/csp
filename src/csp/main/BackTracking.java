@@ -10,7 +10,7 @@ import utils.LOG;
 import utils.Utils;
 
 public class BackTracking {
-    LOG log = new LOG(true);
+    LOG log = new LOG(false);
 
     public String problemName;
     public Long cpu;
@@ -67,6 +67,11 @@ public class BackTracking {
         }
         return res;
     }
+    public String varAssignment2String() {
+        return this.variablesAssignment.values()
+                .stream().map(val -> val.toString())
+                .collect(Collectors.joining(","));
+    }
     //bcssp: Binary constraint satisfaction “search” problem
     public void bcssp() {
         Long startTime = Utils.getCpuTimeInNano();
@@ -79,6 +84,7 @@ public class BackTracking {
                 log.debug("btLabel()");
                 index = btLabel(index);
             } else {
+                log.debug("Unlabel()");
                 this.numBacktrack += 1;
                 if (index == 0){
                     if (this.numSolution > 0) {
@@ -88,18 +94,19 @@ public class BackTracking {
                 }
                 index = btUnlabel(index);
             }
-            log.debug(varsCurrentDomain2Str());
+            log.debug(varAssignment2String()+"\n");
             if (index > variables.size()-1) {
                 this.numSolution+=1;
                 if (this.numSolution == 1) {
                     this.cpu = Utils.getCpuTimeInNano() - startTime;
                     this.generatedStat += this.getFirstSolutionStat();
+//                    log.debug = true;
+                    log.info(" FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======");
                 }
 
-                index = index - 1; //this will later force label to be called on the last variable with next value
-                this.variables.get(index).currentDomain.currentVals.remove(0);
-                this.consistent = this.variables.get(index).currentDomain.currentVals.size() > 0;
-
+                index = this.variables.size() - 1; //this will later force label to be called on the last variable with next value
+                this.consistent = this.variables.get(this.variables.size() - 1).currentDomain.currentVals.size() > 0;
+                this.variables.get(this.variables.size() - 1).currentDomain.currentVals.remove(0);
             } else if (index < 0) {
                 status = BacktrackStatus.IMPOSSIBLE;
                 break;
@@ -165,7 +172,6 @@ public class BackTracking {
         } //universal constraint
 
         this.cc ++;
-        boolean res = false;
         for (PConstraint con : constraints) {
             long val;
             if (!reverseVal) {
@@ -173,12 +179,12 @@ public class BackTracking {
             } else {
                 val = con.computeCostOf(new int[]{valj, vali});
             }
-            res = res || (val == 0);
+            if (val == 1) { return false; }
         }
 
         String valInStr = !reverseVal ? "(" + vali +","+valj+")" : "(" + valj +","+vali+")";
 //        log.debug("(" + vari.getName() + ", " + varj.getName() + ") | " + valInStr + ": " + res);
-        return res;
+        return true;
     }
 
     public List<PConstraint> findConstraintByScope(List<PVariable> scope) {
@@ -191,6 +197,24 @@ public class BackTracking {
         }
         if (res.size() == 0) { return null; }
         return res;
+    }
+
+    public void preOrderVariableOrValue(String methods) {
+        if (methods.equals("LX")) { //lexicographical ordering heuristic
+            Collections.sort(this.variables, (v1, v2) -> {
+                return v1.getName().compareTo(v2.getName());
+            });
+        } else if (methods.equals("LD")) { // least domain ordering heuristic
+            Collections.sort(this.variables, (v1, v2) -> {
+                return v1.currentDomain.currentVals.size() - v2.currentDomain.currentVals.size();
+            });
+        } else if (methods.equals("DEG")) {//degree domain ordering heuristic
+
+        } else if (methods.equals("DD")) {// domain degree domain ordering heuristic
+
+        } else {
+            LOG.error("Invalid preOrdering methods: " + methods);
+        }
     }
 
     public String getInitReport() {
