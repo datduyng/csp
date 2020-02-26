@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 import abscon.instance.components.PConstraint;
 import abscon.instance.components.PVariable;
 
+import javafx.scene.layout.Priority;
 import utils.LOG;
 import utils.Utils;
 
@@ -60,18 +61,6 @@ public class BackTracking {
         IMPOSSIBLE
     }
 
-    public String varsCurrentDomain2Str() {
-        String res = "";
-        for (PVariable var : variables) {
-            res += var.getName() + ": " + var.currentDomain.currentVals.toString() + "\n";
-        }
-        return res;
-    }
-    public String varAssignment2String() {
-        return this.variablesAssignment.values()
-                .stream().map(val -> val.toString())
-                .collect(Collectors.joining(","));
-    }
     //bcssp: Binary constraint satisfaction “search” problem
     public void bcssp() {
         Long startTime = Utils.getCpuTimeInNano();
@@ -103,10 +92,14 @@ public class BackTracking {
 //                    log.debug = true;
                     log.info(" FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======");
                 }
+                log.info("solution: " + this.getSolutionInStr());
 
                 index = this.variables.size() - 1; //this will later force label to be called on the last variable with next value
                 this.consistent = this.variables.get(this.variables.size() - 1).currentDomain.currentVals.size() > 0;
                 this.variables.get(this.variables.size() - 1).currentDomain.currentVals.remove(0);
+            } else if (index < 0 && this.numSolution > 0) {
+                status = BacktrackStatus.SOLUTION;
+                break;
             } else if (index < 0) {
                 status = BacktrackStatus.IMPOSSIBLE;
                 break;
@@ -200,20 +193,98 @@ public class BackTracking {
     }
 
     public void preOrderVariableOrValue(String methods) {
-        if (methods.equals("LX")) { //lexicographical ordering heuristic
+        keepNodeConsistent();
+        if (methods.equalsIgnoreCase("LX")) { //lexicographical ordering heuristic
             Collections.sort(this.variables, (v1, v2) -> {
                 return v1.getName().compareTo(v2.getName());
             });
-        } else if (methods.equals("LD")) { // least domain ordering heuristic
+        } else if (methods.equalsIgnoreCase("LD")) { // least domain ordering heuristic
             Collections.sort(this.variables, (v1, v2) -> {
-                return v1.currentDomain.currentVals.size() - v2.currentDomain.currentVals.size();
+                int dom1Size = v1.currentDomain.currentVals.size();
+                int dom2Size = v2.currentDomain.currentVals.size();
+                if (dom1Size == dom2Size) {
+                    return v1.getName().compareTo(v2.getName());
+                }
+                return dom1Size - dom2Size;
             });
-        } else if (methods.equals("DEG")) {//degree domain ordering heuristic
 
-        } else if (methods.equals("DD")) {// domain degree domain ordering heuristic
-
+            /*
+            TO order the variable. We start at the node with largest degree. Then remove
+            The edges from other node.
+             */
+        } else if (methods.equalsIgnoreCase("DEG")) {//degree domain ordering heuristic
+            Set<PVariable> visited = new HashSet<>();
+            TreeSet<PVariable> treeSet = new TreeSet<>((var1, var2) -> {
+                if (var1.equals(var2)) {
+                    return 0;
+                }
+                int degree1 = 0;
+                for (PVariable var : var1.neighbors) {
+                    if (!visited.contains(var)) { degree1++; }
+                }
+                int degree2 = 0;
+                for (PVariable var : var2.neighbors) {
+                    if (!visited.contains(var)) { degree2++; }
+                }
+                if (degree1 == degree2) {
+                    return var1.getName().compareTo(var2.getName());
+                }
+                return degree2 - degree1;
+            });
+            for (PVariable var : this.variables) {
+                treeSet.add(var);
+            }
+            List<PVariable> ordered = new ArrayList<>();
+            while (!treeSet.isEmpty()) {
+                PVariable visit = treeSet.pollFirst();
+                log.info("visited " + visit.getName() + " deg: " + visit.neighbors.size());
+                if (visited.contains(visit)) { continue; }
+                ordered.add(visit);
+                visited.add(visit);
+                for (PVariable neigh : visit.neighbors) {
+                    if (visited.contains(neigh)) {
+                        continue;
+                    }
+                    //force reodering
+                    log.info("\tbefore remove " + neigh.getName() +  " size "+ treeSet.size());
+                    treeSet.remove(neigh);
+                    log.info("\tafter remove " + neigh.getName() +  " size "+ treeSet.size());
+                    treeSet.add(neigh);
+                    log.info("\tadded back " + neigh.getName() +  " size "+ treeSet.size());
+                }
+                log.info("name: "+ treeSet.stream().map(var -> var.getName()).collect(Collectors.joining(",")));
+                log.info("here" + " Size " + treeSet.size());
+            }
+            this.variables = ordered;
+        } else if (methods.equalsIgnoreCase("DD")) {// domain degree domain ordering heuristic
+            Collections.sort(this.variables, (v1, v2) -> {
+                if (v1.neighbors.size() == 0) { return 1; }
+                if (v2.neighbors.size() == 0) { return -1; }
+                double domDeg1 = (double)v1.currentDomain.currentVals.size()/(double)v1.neighbors.size();
+                double domDeg2 = (double)v2.currentDomain.currentVals.size()/(double)v2.neighbors.size();
+                if (domDeg1 > domDeg2) { return 1; }
+                else if (domDeg1 < domDeg2) { return -1; }
+                else {
+                    return 0; //v1.getName().compareTo(v2.getName());
+                }
+            });
         } else {
             LOG.error("Invalid preOrdering methods: " + methods);
+        }
+        log.info("variable: " + this.varNameList());
+    }
+
+    public void keepNodeConsistent() {
+        for (PConstraint con : this.constraints) {
+            if (con.getScope().length != 1) { continue; }
+
+            List<Integer> domainVals = new ArrayList<>(
+                    con.getScope()[0].currentDomain.currentVals);
+            for (Integer vali : domainVals) {
+                if (!con.isSupportedBy(new int[]{vali, vali})) {
+                    con.getScope()[0].currentDomain.removeCurrentValByVal(vali);
+                }
+            }
         }
     }
 
@@ -224,10 +295,14 @@ public class BackTracking {
                 "value-ordering-heuristic: " + this.valueOderingHeuristic + "\n" +
                 "val-static-dynamic: " + this.valueOderingHeuristic + "\n";
     }
-    public String getFirstSolutionStat() {
-        String firstSolution = this.variablesAssignment.values()
+
+    public String getSolutionInStr() {
+        return this.variablesAssignment.values()
                 .stream().map(val -> val.toString())
                 .collect(Collectors.joining(","));
+    }
+    public String getFirstSolutionStat() {
+        String firstSolution = this.getSolutionInStr();
         firstSolution += "\t(" +
                 this.variablesAssignment.keySet().stream().map(var -> var.getName())
                         .collect(Collectors.joining(",")) + ")";
@@ -248,6 +323,26 @@ public class BackTracking {
 
     public Double getCpuTimeInMicro() {
         return (double) this.cpu / 100000.0;
+    }
+
+    public String varsCurrentDomain2Str() {
+        String res = "";
+        for (PVariable var : variables) {
+            res += var.getName() + ": " + var.currentDomain.currentVals.toString() + "\n";
+        }
+        return res;
+    }
+
+    public String varAssignment2String() {
+        return this.variablesAssignment.values()
+                .stream().map(val -> val.toString())
+                .collect(Collectors.joining(","));
+    }
+
+    public String varNameList() {
+        return this.variables.stream()
+                .map(var -> var.getName())
+                .collect(Collectors.joining(", "));
     }
 
 }

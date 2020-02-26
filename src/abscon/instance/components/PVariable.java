@@ -1,8 +1,10 @@
 package abscon.instance.components;
 
+import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
-public class PVariable {
+public class PVariable implements Comparator<PVariable> {
 	private String name;
 
 	private PDomain domain;
@@ -21,7 +23,12 @@ public class PVariable {
 		return domain;
 	}
 
+	public PVariable() {
+		this.neighbors = new LinkedHashSet<>();
+	}
+
 	public PVariable(String name, PDomain domain) {
+		this();
 		this.name = name;
 		this.domain = domain;
 		this.currentDomain = PDomain.deepCopy(domain);
@@ -30,16 +37,16 @@ public class PVariable {
 	public void resetCurrentDomain() {
 		this.currentDomain = PDomain.deepCopy(this.domain);
 	}
+
+
 	@Override
 	public boolean equals(Object o) {
 		if (o == null) { return false; }
 		if (this == o) { return true; }
-
+		if(o == null || o.getClass() != this.getClass())
+			return false;
 		// instanceof Check and actual value check
-		if ((o instanceof PVariable) && (((PVariable) o).name.equals(this.name))) {
-			return true;
-		}
-		return false;
+		return (((PVariable) o).name.equals(this.name));
 	}
 
 	@Override
