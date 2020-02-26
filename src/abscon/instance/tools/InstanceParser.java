@@ -493,7 +493,14 @@ public class InstanceParser {
 	}
 
 	public void populateVariablesNeighborsReferences() {
+		List<PConstraint> constraints = this.mapOfConstraints.values().stream().collect(Collectors.toList());
+		for (PConstraint con : constraints) {
+			if (con.getScope().length <= 1) { continue; }
 
+			//TODO: handle case where scope.length > 2
+			con.getScope()[0].neighbors.add(con.getScope()[1]);
+			con.getScope()[1].neighbors.add(con.getScope()[0]);
+		}
 	}
 
 	public void populateVariablesConstraintReferences() {
