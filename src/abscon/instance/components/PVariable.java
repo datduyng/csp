@@ -4,7 +4,7 @@ import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-public class PVariable implements Comparator<PVariable> {
+public class PVariable {
 	private String name;
 
 	private PDomain domain;
@@ -30,12 +30,14 @@ public class PVariable implements Comparator<PVariable> {
 	public PVariable(String name, PDomain domain) {
 		this();
 		this.name = name;
-		this.domain = domain;
-		this.currentDomain = PDomain.deepCopy(domain);
+		this.domain = PDomain.hardDeepCopy(domain);
+		this.currentDomain = PDomain.hardDeepCopy(domain);
 	}
 
 	public void resetCurrentDomain() {
-		this.currentDomain = PDomain.deepCopy(this.domain);
+//		this.currentDomain = PDomain.deepCopy(this.domain);
+		this.currentDomain = new PDomain(this.domain.getName(), this.domain.getValues(),
+				this.domain.currentVals);
 	}
 
 

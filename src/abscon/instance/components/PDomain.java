@@ -29,6 +29,15 @@ public class PDomain {
 		for (int val : values) { this.currentVals.add(val); }
 	}
 
+	public PDomain(String name, int[] values, List<Integer> currentVals) {
+		this.name = name;
+		this.values = values;
+		this.currentVals = new ArrayList<>();
+		for (int c : currentVals) {
+			this.currentVals.add(c);
+		}
+	}
+
 	public int getMaxAbsoluteValue() {
 		return Math.max(Math.abs(values[0]), Math.abs(values[values.length - 1]));
 	}
@@ -76,7 +85,7 @@ public class PDomain {
 			sb.append(previousValue);
 		return sb.toString();
 	}
-	
+
 	public boolean controlValueRanging(int min, int max) {
 		for (int v : values)
 			if (v < min || v > max)
@@ -84,8 +93,13 @@ public class PDomain {
 		return true;
 	}
 
-	public static PDomain deepCopy(PDomain dom) {
+	public static PDomain hardDeepCopy(PDomain dom) {
 		return new PDomain(
 				dom.name, dom.values);
+	}
+
+	public static PDomain deepCopy(PDomain dom) {
+		return new PDomain(
+				dom.name, dom.values, dom.currentVals);
 	}
 }

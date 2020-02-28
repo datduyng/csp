@@ -56,6 +56,7 @@ public class CSPSolver {
                     parser.getVariablesAsList(),
                     parser.getConstraintsAsList()
             );
+            BT.keepNodeConsistent();
 
             if (!orderingHeuristic.equals("")) {
                 BT.preOrderVariableOrValue(orderingHeuristic);

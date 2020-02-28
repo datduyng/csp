@@ -1,12 +1,21 @@
 package csp.main;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
+
+//import abscon.instance.tools.InstanceParser;
+//import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
+//import org.apache.poi.ss.usermodel.Row;
+//import org.apache.poi.ss.usermodel.Sheet;
+//import org.apache.poi.ss.usermodel.Workbook;
+//import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import abscon.instance.components.PConstraint;
 import abscon.instance.components.PVariable;
 
-import javafx.scene.layout.Priority;
 import utils.LOG;
 import utils.Utils;
 
@@ -67,6 +76,7 @@ public class BackTracking {
         this.consistent = true;
         BacktrackStatus status = BacktrackStatus.UNKNOWN;
         int index = 0;
+        log.info("After applying order: " + this.varNameList());
         while (status == BacktrackStatus.UNKNOWN) {
             log.debug("index " + index);
             if (consistent) {
@@ -85,15 +95,12 @@ public class BackTracking {
             }
             log.debug(varAssignment2String()+"\n");
             if (index > variables.size()-1) {
+
                 this.numSolution+=1;
                 if (this.numSolution == 1) {
                     this.cpu = Utils.getCpuTimeInNano() - startTime;
                     this.generatedStat += this.getFirstSolutionStat();
-//                    log.debug = true;
-                    log.info(" FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======| FOUND 1 solution =======");
                 }
-                log.info("solution: " + this.getSolutionInStr());
-
                 index = this.variables.size() - 1; //this will later force label to be called on the last variable with next value
                 this.consistent = this.variables.get(this.variables.size() - 1).currentDomain.currentVals.size() > 0;
                 this.variables.get(this.variables.size() - 1).currentDomain.currentVals.remove(0);
@@ -129,7 +136,7 @@ public class BackTracking {
                 //TODO: Double check this. should this be an && or || ???
                 consistent = check(vari, variablesAssignment.get(vari),
                                     pastVar, variablesAssignment.get(pastVar), false) &&
-                            check(pastVar, variablesAssignment.get(vari),
+                                check(pastVar, variablesAssignment.get(vari),
                                     vari, variablesAssignment.get(pastVar), true);
                 if (!consistent) {
                     vari.currentDomain.removeCurrentValByVal(currentDomainVal);
@@ -144,9 +151,8 @@ public class BackTracking {
 
     private Integer btUnlabel(int varIndex) {
         PVariable vari = this.variables.get(varIndex);
-        int h = varIndex - 1;
         vari.resetCurrentDomain();
-
+        int h = varIndex - 1;
         PVariable pastVar = this.variables.get(h);
         pastVar.currentDomain.removeCurrentValByVal(variablesAssignment.getOrDefault(pastVar, null));
         this.consistent = (pastVar.currentDomain.currentVals.size() != 0);
@@ -157,15 +163,20 @@ public class BackTracking {
 
     public boolean check(PVariable vari, Integer vali,
                          PVariable varj, Integer valj, boolean reverseVal) {
-        List<PConstraint> constraints = findConstraintByScope(
+        List<PConstraint> cons = findConstraintByScope(
                 new ArrayList<>(Arrays.asList(vari, varj)));
-        if (constraints == null) {
-//            log.debug("(" + vari.getName() + ", " + varj.getName() + ") | (" + vali +","+valj+")"+ ": " + "true (universal constraint)");
+//        log.info("("+vari.getName()+","+varj.getName()+")"+"|"+
+//                (cons != null ? cons.stream()
+//                        .map(con -> con.getName())
+//                        .collect(Collectors.joining(",")) : "null") );
+
+        if (cons == null) {
             return true;
         } //universal constraint
 
-        this.cc ++;
-        for (PConstraint con : constraints) {
+
+        for (PConstraint con : cons) {
+            this.cc ++;
             long val;
             if (!reverseVal) {
                 val = con.computeCostOf(new int[]{vali, valj});
@@ -175,8 +186,6 @@ public class BackTracking {
             if (val == 1) { return false; }
         }
 
-        String valInStr = !reverseVal ? "(" + vali +","+valj+")" : "(" + valj +","+vali+")";
-//        log.debug("(" + vari.getName() + ", " + varj.getName() + ") | " + valInStr + ": " + res);
         return true;
     }
 
@@ -192,8 +201,45 @@ public class BackTracking {
         return res;
     }
 
+    public void sortVariableDEG(Set<PVariable> visited) {
+        Collections.sort(this.variables, (var1, var2) -> {
+            int degree1 = 0;
+            for (PVariable var : var1.neighbors) {
+                if (!visited.contains(var)) { degree1++; }
+            }
+            int degree2 = 0;
+            for (PVariable var : var2.neighbors) {
+                if (!visited.contains(var)) { degree2++; }
+            }
+            if (degree1 == degree2) {
+                return var1.getName().compareTo(var2.getName());
+            }
+            return degree2 - degree1;
+        });
+    }
+
+    public void sortVariableDD(Set<PVariable> visited) {
+        Collections.sort(this.variables, (var1, var2) -> {
+            int degree1 = 0;
+            for (PVariable var : var1.neighbors) {
+                if (!visited.contains(var)) { degree1++; }
+            }
+            int degree2 = 0;
+            for (PVariable var : var2.neighbors) {
+                if (!visited.contains(var)) { degree2++; }
+            }
+            if (degree1 == degree2 && var1.currentDomain.currentVals.size() == var2.currentDomain.currentVals.size()) {
+                return var1.getName().compareTo(var2.getName());
+            }
+//            return degree2 - degree1;
+            double ddr1 = (double)var1.currentDomain.currentVals.size()/(double)degree1;
+            double ddr2 = (double)var2.currentDomain.currentVals.size()/(double)degree2;
+            return ddr1 > ddr2 ? 1 : -1;
+        });
+
+    }
+
     public void preOrderVariableOrValue(String methods) {
-        keepNodeConsistent();
         if (methods.equalsIgnoreCase("LX")) { //lexicographical ordering heuristic
             Collections.sort(this.variables, (v1, v2) -> {
                 return v1.getName().compareTo(v2.getName());
@@ -214,64 +260,29 @@ public class BackTracking {
              */
         } else if (methods.equalsIgnoreCase("DEG")) {//degree domain ordering heuristic
             Set<PVariable> visited = new HashSet<>();
-            TreeSet<PVariable> treeSet = new TreeSet<>((var1, var2) -> {
-                if (var1.equals(var2)) {
-                    return 0;
-                }
-                int degree1 = 0;
-                for (PVariable var : var1.neighbors) {
-                    if (!visited.contains(var)) { degree1++; }
-                }
-                int degree2 = 0;
-                for (PVariable var : var2.neighbors) {
-                    if (!visited.contains(var)) { degree2++; }
-                }
-                if (degree1 == degree2) {
-                    return var1.getName().compareTo(var2.getName());
-                }
-                return degree2 - degree1;
-            });
-            for (PVariable var : this.variables) {
-                treeSet.add(var);
-            }
             List<PVariable> ordered = new ArrayList<>();
-            while (!treeSet.isEmpty()) {
-                PVariable visit = treeSet.pollFirst();
-                log.info("visited " + visit.getName() + " deg: " + visit.neighbors.size());
-                if (visited.contains(visit)) { continue; }
-                ordered.add(visit);
-                visited.add(visit);
-                for (PVariable neigh : visit.neighbors) {
-                    if (visited.contains(neigh)) {
-                        continue;
-                    }
-                    //force reodering
-                    log.info("\tbefore remove " + neigh.getName() +  " size "+ treeSet.size());
-                    treeSet.remove(neigh);
-                    log.info("\tafter remove " + neigh.getName() +  " size "+ treeSet.size());
-                    treeSet.add(neigh);
-                    log.info("\tadded back " + neigh.getName() +  " size "+ treeSet.size());
-                }
-                log.info("name: "+ treeSet.stream().map(var -> var.getName()).collect(Collectors.joining(",")));
-                log.info("here" + " Size " + treeSet.size());
+            int numOfVar = this.variables.size();
+            for (int i=0; i<numOfVar; i++) {
+                sortVariableDEG(visited);
+                visited.add(this.variables.get(0));
+                ordered.add(this.variables.get(0));
+                this.variables.remove(0);
             }
             this.variables = ordered;
         } else if (methods.equalsIgnoreCase("DD")) {// domain degree domain ordering heuristic
-            Collections.sort(this.variables, (v1, v2) -> {
-                if (v1.neighbors.size() == 0) { return 1; }
-                if (v2.neighbors.size() == 0) { return -1; }
-                double domDeg1 = (double)v1.currentDomain.currentVals.size()/(double)v1.neighbors.size();
-                double domDeg2 = (double)v2.currentDomain.currentVals.size()/(double)v2.neighbors.size();
-                if (domDeg1 > domDeg2) { return 1; }
-                else if (domDeg1 < domDeg2) { return -1; }
-                else {
-                    return 0; //v1.getName().compareTo(v2.getName());
-                }
-            });
+            Set<PVariable> visited = new HashSet<>();
+            List<PVariable> ordered = new ArrayList<>();
+            int numOfVar = this.variables.size();
+            for (int i=0; i<numOfVar; i++) {
+                sortVariableDD(visited);
+                visited.add(this.variables.get(0));
+                ordered.add(this.variables.get(0));
+                this.variables.remove(0);
+            }
+            this.variables = ordered;
         } else {
             LOG.error("Invalid preOrdering methods: " + methods);
         }
-        log.info("variable: " + this.varNameList());
     }
 
     public void keepNodeConsistent() {
@@ -283,6 +294,7 @@ public class BackTracking {
             for (Integer vali : domainVals) {
                 if (!con.isSupportedBy(new int[]{vali, vali})) {
                     con.getScope()[0].currentDomain.removeCurrentValByVal(vali);
+                    con.getScope()[0].getDomain().removeCurrentValByVal(vali);
                 }
             }
         }
@@ -297,9 +309,12 @@ public class BackTracking {
     }
 
     public String getSolutionInStr() {
-        return this.variablesAssignment.values()
-                .stream().map(val -> val.toString())
+        return this.variables.stream()
+                .map(var -> this.variablesAssignment.get(var).toString())
                 .collect(Collectors.joining(","));
+//        return this.variablesAssignment.values()
+//                .stream().map(val -> val.toString())
+//                .collect(Collectors.joining(","));
     }
     public String getFirstSolutionStat() {
         String firstSolution = this.getSolutionInStr();
@@ -344,5 +359,65 @@ public class BackTracking {
                 .map(var -> var.getName())
                 .collect(Collectors.joining(", "));
     }
+
+//    public static void writeToXLS(String inputFile, String dirPath) throws IOException, InvalidFormatException {
+//        Workbook wb = new XSSFWorkbook();
+//        Sheet sheet = wb.createSheet("test");
+//        File dir = new File(dirPath);
+//        File[] directoryListing = dir.listFiles();
+//        int startingRowIdx = 3;
+//        int id = 1;
+//        if (directoryListing != null) {
+//            Arrays.sort(directoryListing, (f1, f2) -> {
+//                return f1.getName().compareTo(f2.getName());
+//            });
+//            for (File child : directoryListing) {
+//                if (child.getName().equals("zebra-intension-nonbinary.xml")) { continue; }
+//                InstanceParser parser = new InstanceParser();
+//                parser.loadInstance(child.getPath());
+//                parser.parse(false);
+////                MyParser parserAc1 = new MyParser(child.getPath());
+////                ProblemInstance piAc1 = parserAc1.parse();
+//                csp.old.CSPSolver cspSolverAc1 = new csp.old.CSPSolver(piAc1);
+//                cspSolverAc1.arcConsistency1();
+//
+//                Row row = sheet.createRow(startingRowIdx);
+//                row.createCell(0).setCellValue(id);
+//                row.createCell(1).setCellValue(child.getName());
+//                row.createCell(2).setCellValue(cspSolverAc1.getCc());
+//                row.createCell(3).setCellValue(cspSolverAc1.getCpuTime());
+//                row.createCell(4).setCellValue(cspSolverAc1.getFval());
+//                row.createCell(5).setCellValue(cspSolverAc1.getiSize());
+//                row.createCell(6).setCellValue(cspSolverAc1.getfSize() != null ? ""+cspSolverAc1.getfSize() : "FALSE");
+//                row.createCell(7).setCellValue(cspSolverAc1.getfSize() != null ? ""+cspSolverAc1.getfEffect() : "FALSE");
+//
+//
+//                //AC3
+//                MyParser parserAc3 = new MyParser(child.getPath());
+//                ProblemInstance piAc3 = parserAc3.parse();
+//                csp.old.CSPSolver cspSolverAc3 = new CSPSolver(piAc3);
+//                cspSolverAc3.arcConsistency3();
+//
+//                row.createCell(8).setCellValue(cspSolverAc3.getCc());
+//                row.createCell(9).setCellValue(cspSolverAc3.getCpuTime());
+//                row.createCell(10).setCellValue(cspSolverAc3.getFval());
+//                row.createCell(11).setCellValue(cspSolverAc3.getiSize());
+//                row.createCell(12).setCellValue(cspSolverAc3.getfSize() != null ? ""+cspSolverAc3.getfSize() : "FALSE");
+//                row.createCell(13).setCellValue(cspSolverAc3.getfSize() != null ? ""+cspSolverAc3.getfEffect() : "FALSE");
+//
+//                startingRowIdx++; id++;
+//            }
+//            FileOutputStream fos = new FileOutputStream("./results/new.xlsx");
+//            wb.write(fos);
+//            fos.close();
+//            wb.close();
+//            return;
+//        }
+//        LOG.info("Nothing under tests/folder");
+//        FileOutputStream fos = new FileOutputStream("./results/new.xlsx");
+//        wb.write(fos);
+//        fos.close();
+//        wb.close();
+//    }
 
 }
