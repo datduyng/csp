@@ -15,11 +15,8 @@ public class CSPSolver {
 
         String file = cliArgs.switchValue("-f", null);
         String acType = cliArgs.switchValue("-a", "");
-        String printReport = cliArgs.switchValue("-print-report", null);
         String backtrack = cliArgs.switchValue("-s", "");
         String orderingHeuristic = cliArgs.switchValue("-u", "");
-
-        boolean showInfo = cliArgs.switchPresent("-info");
 
         InstanceParser parser = new InstanceParser();
         if (file != null) {
@@ -46,9 +43,8 @@ public class CSPSolver {
                     parser.getVariablesAsList(),
                     parser.getConstraintsAsList()
             );
-
+            //TODO: implement AC3.
         }
-
 
         if (backtrack.equals("BT")) {
             BackTracking BT = new BackTracking(

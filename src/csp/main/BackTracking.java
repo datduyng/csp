@@ -1,17 +1,7 @@
 package csp.main;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
-
-//import abscon.instance.tools.InstanceParser;
-//import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
-//import org.apache.poi.ss.usermodel.Row;
-//import org.apache.poi.ss.usermodel.Sheet;
-//import org.apache.poi.ss.usermodel.Workbook;
-//import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import abscon.instance.components.PConstraint;
 import abscon.instance.components.PVariable;
@@ -23,6 +13,11 @@ public class BackTracking {
     LOG log = new LOG(false);
 
     public String problemName;
+    public Double firstSolCpu;
+    public Long firstSolCc;
+    public Long firstSolNumNodeVisited;
+    public Long firstSolNumBacktrack;
+
     public Long cpu;
     public Long cc;
     public Long numNodeVisited;//incremented in bt-label function
@@ -42,13 +37,17 @@ public class BackTracking {
 
     public BackTracking() {
         problemName = "";
+        firstSolCpu = 0.0;
+        firstSolCc = 0L;
+        firstSolNumBacktrack = 0L;
+        firstSolNumNodeVisited = 0L;
         cpu = 0L;
         cc = 0L;
         numNodeVisited = 0L;
         numBacktrack = 0L;
         numSolution = 0L;
         variableOrderingHeuristic = "NA";
-        variableStaticDynamic = "NA";
+        variableStaticDynamic = "static";
         valueOderingHeuristic = "NA";
         valueStaticDynamic = "NA";
         variablesAssignment = new HashMap<>();
@@ -61,7 +60,6 @@ public class BackTracking {
         this.problemName = problemName;
         this.variables = variables;
         this.constraints = constraints;
-        this.generatedStat += getInitReport();
     }
 
     enum BacktrackStatus {
@@ -72,12 +70,14 @@ public class BackTracking {
 
     //bcssp: Binary constraint satisfaction “search” problem
     public void bcssp() {
+        this.generatedStat += getInitReport();
         Long startTime = Utils.getCpuTimeInNano();
         this.consistent = true;
         BacktrackStatus status = BacktrackStatus.UNKNOWN;
         int index = 0;
         log.info("After applying order: " + this.varNameList());
         while (status == BacktrackStatus.UNKNOWN) {
+//            log.info("index " + index);
             log.debug("index " + index);
             if (consistent) {
                 log.debug("btLabel()");
@@ -101,6 +101,7 @@ public class BackTracking {
                     this.cpu = Utils.getCpuTimeInNano() - startTime;
                     this.generatedStat += this.getFirstSolutionStat();
                 }
+                log.info("Solution:" + this.getSolutionInStr());
                 index = this.variables.size() - 1; //this will later force label to be called on the last variable with next value
                 this.consistent = this.variables.get(this.variables.size() - 1).currentDomain.currentVals.size() > 0;
                 this.variables.get(this.variables.size() - 1).currentDomain.currentVals.remove(0);
@@ -241,10 +242,12 @@ public class BackTracking {
 
     public void preOrderVariableOrValue(String methods) {
         if (methods.equalsIgnoreCase("LX")) { //lexicographical ordering heuristic
+            this.variableOrderingHeuristic = "id-var-st";
             Collections.sort(this.variables, (v1, v2) -> {
                 return v1.getName().compareTo(v2.getName());
             });
         } else if (methods.equalsIgnoreCase("LD")) { // least domain ordering heuristic
+            this.variableOrderingHeuristic = "ld-var-st";
             Collections.sort(this.variables, (v1, v2) -> {
                 int dom1Size = v1.currentDomain.currentVals.size();
                 int dom2Size = v2.currentDomain.currentVals.size();
@@ -259,6 +262,7 @@ public class BackTracking {
             The edges from other node.
              */
         } else if (methods.equalsIgnoreCase("DEG")) {//degree domain ordering heuristic
+            this.variableOrderingHeuristic = "deg-var-st";
             Set<PVariable> visited = new HashSet<>();
             List<PVariable> ordered = new ArrayList<>();
             int numOfVar = this.variables.size();
@@ -270,6 +274,7 @@ public class BackTracking {
             }
             this.variables = ordered;
         } else if (methods.equalsIgnoreCase("DD")) {// domain degree domain ordering heuristic
+            this.variableOrderingHeuristic = "ddr-var-st";
             Set<PVariable> visited = new HashSet<>();
             List<PVariable> ordered = new ArrayList<>();
             int numOfVar = this.variables.size();
@@ -321,6 +326,10 @@ public class BackTracking {
         firstSolution += "\t(" +
                 this.variablesAssignment.keySet().stream().map(var -> var.getName())
                         .collect(Collectors.joining(",")) + ")";
+        firstSolCpu = this.getCpuTimeInMicro();
+        firstSolCc = this.cc;
+        firstSolNumBacktrack = this.numBacktrack;
+        firstSolNumNodeVisited = this.numNodeVisited;
         return "cc: " + this.cc + "\n" +
                 "nv: " + this.numNodeVisited + "\n" +
                 "bt: " + this.numBacktrack + "\n" +
@@ -359,65 +368,4 @@ public class BackTracking {
                 .map(var -> var.getName())
                 .collect(Collectors.joining(", "));
     }
-
-//    public static void writeToXLS(String inputFile, String dirPath) throws IOException, InvalidFormatException {
-//        Workbook wb = new XSSFWorkbook();
-//        Sheet sheet = wb.createSheet("test");
-//        File dir = new File(dirPath);
-//        File[] directoryListing = dir.listFiles();
-//        int startingRowIdx = 3;
-//        int id = 1;
-//        if (directoryListing != null) {
-//            Arrays.sort(directoryListing, (f1, f2) -> {
-//                return f1.getName().compareTo(f2.getName());
-//            });
-//            for (File child : directoryListing) {
-//                if (child.getName().equals("zebra-intension-nonbinary.xml")) { continue; }
-//                InstanceParser parser = new InstanceParser();
-//                parser.loadInstance(child.getPath());
-//                parser.parse(false);
-////                MyParser parserAc1 = new MyParser(child.getPath());
-////                ProblemInstance piAc1 = parserAc1.parse();
-//                csp.old.CSPSolver cspSolverAc1 = new csp.old.CSPSolver(piAc1);
-//                cspSolverAc1.arcConsistency1();
-//
-//                Row row = sheet.createRow(startingRowIdx);
-//                row.createCell(0).setCellValue(id);
-//                row.createCell(1).setCellValue(child.getName());
-//                row.createCell(2).setCellValue(cspSolverAc1.getCc());
-//                row.createCell(3).setCellValue(cspSolverAc1.getCpuTime());
-//                row.createCell(4).setCellValue(cspSolverAc1.getFval());
-//                row.createCell(5).setCellValue(cspSolverAc1.getiSize());
-//                row.createCell(6).setCellValue(cspSolverAc1.getfSize() != null ? ""+cspSolverAc1.getfSize() : "FALSE");
-//                row.createCell(7).setCellValue(cspSolverAc1.getfSize() != null ? ""+cspSolverAc1.getfEffect() : "FALSE");
-//
-//
-//                //AC3
-//                MyParser parserAc3 = new MyParser(child.getPath());
-//                ProblemInstance piAc3 = parserAc3.parse();
-//                csp.old.CSPSolver cspSolverAc3 = new CSPSolver(piAc3);
-//                cspSolverAc3.arcConsistency3();
-//
-//                row.createCell(8).setCellValue(cspSolverAc3.getCc());
-//                row.createCell(9).setCellValue(cspSolverAc3.getCpuTime());
-//                row.createCell(10).setCellValue(cspSolverAc3.getFval());
-//                row.createCell(11).setCellValue(cspSolverAc3.getiSize());
-//                row.createCell(12).setCellValue(cspSolverAc3.getfSize() != null ? ""+cspSolverAc3.getfSize() : "FALSE");
-//                row.createCell(13).setCellValue(cspSolverAc3.getfSize() != null ? ""+cspSolverAc3.getfEffect() : "FALSE");
-//
-//                startingRowIdx++; id++;
-//            }
-//            FileOutputStream fos = new FileOutputStream("./results/new.xlsx");
-//            wb.write(fos);
-//            fos.close();
-//            wb.close();
-//            return;
-//        }
-//        LOG.info("Nothing under tests/folder");
-//        FileOutputStream fos = new FileOutputStream("./results/new.xlsx");
-//        wb.write(fos);
-//        fos.close();
-//        wb.close();
-//    }
-
 }
