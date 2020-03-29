@@ -1,14 +1,19 @@
 package csp.main;
 
+import abscon.instance.components.PVariable;
 import abscon.instance.tools.InstanceParser;
 import utils.CliArgs;
 import utils.LOG;
+
+import java.util.Arrays;
+import java.util.List;
 
 public class CSPSolver {
     public static String USAGE =
             "./runProgram.sh -f {file_name}" +
                     " [-a {ac1 | ac3}] " +
-                    " [-s {BT}]";
+                    " [-s {BT|CBJ|FC}]" +
+                    " [-u {LX|LD|DEG|DD|dLX|dLD|dDEG|dDD}";
     public static void main(String[] args) {
 
         CliArgs cliArgs = new CliArgs(args);
@@ -16,7 +21,7 @@ public class CSPSolver {
         String file = cliArgs.switchValue("-f", null);
         String acType = cliArgs.switchValue("-a", "");
         String backtrack = cliArgs.switchValue("-s", "");
-        String orderingHeuristic = cliArgs.switchValue("-u", "");
+        String orderingHeuristic = cliArgs.switchValue("-u", null);
 
         InstanceParser parser = new InstanceParser();
         if (file != null) {
@@ -27,10 +32,12 @@ public class CSPSolver {
             return;
         }
 
+        String presentationName = parser.getPresentationName();
+        List<PVariable> variables = parser.getVariablesAsList();
         if (acType.equals("ac1")) {
             ArcConsistency AC = new ArcConsistency(
-                    parser.getPresentationName(),
-                    parser.getVariablesAsList(),
+                    presentationName,
+                    variables,
                     parser.getConstraintsAsList()
             );
 
@@ -39,28 +46,53 @@ public class CSPSolver {
             LOG.stdout(AC.getVarsDomain());
         } else if(acType.equals("ac3")) {
             ArcConsistency AC = new ArcConsistency(
-                    parser.getPresentationName(),
-                    parser.getVariablesAsList(),
+                    presentationName,
+                    variables,
                     parser.getConstraintsAsList()
             );
             //TODO: implement AC3.
         }
 
+        List<String> staticOrderings = Arrays.asList(new String[]{"LX", "LD", "DEG", "DD"});
+        if (orderingHeuristic != null && staticOrderings.contains(orderingHeuristic)) {
+            OrderingHeuristic oh = new OrderingHeuristic(variables);
+            oh.run(orderingHeuristic);
+            variables = oh.variables;
+            oh.printOrdering();
+        }
+
         if (backtrack.equals("BT")) {
             BackTracking BT = new BackTracking(
-                    parser.getPresentationName(),
-                    parser.getVariablesAsList(),
+                    presentationName,
+                    variables,
                     parser.getConstraintsAsList()
             );
             BT.keepNodeConsistent();
-
-            if (!orderingHeuristic.equals("")) {
-                BT.preOrderVariableOrValue(orderingHeuristic);
+            BT.run();
+        } else if (backtrack.equals("CBJ")) {
+            ConflictedBackJumping CBJ = new ConflictedBackJumping(
+                    presentationName,
+                    variables,
+                    parser.getConstraintsAsList()
+            );
+            CBJ.keepNodeConsistent();
+            CBJ.run();
+        } else if (backtrack.equals("FC")) {
+            List<String> dynamicOrdering = Arrays.asList(new String[]{"dLX", "dLD", "dDEG", "dDD"});
+            if (dynamicOrdering.contains(orderingHeuristic)) {
+                DynamicFC fc = new DynamicFC(
+                        orderingHeuristic,
+                        presentationName,
+                        variables,
+                        parser.getConstraintsAsList()
+                );
+                fc.keepNodeConsistent();
+                fc.run();
+            } else {
+                FC fc = new FC(presentationName, variables, parser.getConstraintsAsList());
+                fc.keepNodeConsistent();
+                fc.run();
             }
-
-            BT.bcssp();
         }
-
-
     }
 }

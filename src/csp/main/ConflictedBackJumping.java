@@ -1,16 +1,16 @@
 package csp.main;
 
-import java.util.*;
-import java.util.stream.Collectors;
-
 import abscon.instance.components.PConstraint;
 import abscon.instance.components.PVariable;
+
+import java.util.*;
+import java.util.stream.Collectors;
 
 import utils.LOG;
 import utils.Utils;
 
-public class BackTracking {
-    LOG log = new LOG(false);
+public class ConflictedBackJumping {
+
 
     public String problemName;
     public Double firstSolCpu;
@@ -18,24 +18,22 @@ public class BackTracking {
     public Long firstSolNumNodeVisited;
     public Long firstSolNumBacktrack;
 
+
     public Long cpu;
     public Long cc;
     public Long numNodeVisited;//incremented in bt-label function
     public Long numBacktrack;
     public Long numSolution;
-    public String variableOrderingHeuristic;
-    public String variableStaticDynamic;
-    public String valueOderingHeuristic;
-    public String valueStaticDynamic;
-    public String generatedStat;
 
-
-    private Map<PVariable, Integer> variablesAssignment;
-
-    private List<PConstraint> constraints;
     private List<PVariable> variables;
+    private List<PConstraint> constraints;
+    private List<Integer>[] conf_set;
+    private Map<PVariable, Integer> variablesAssignment;
+    private Integer[] cbf;
+    private boolean consistent;
+    private String generatedStat;
 
-    public BackTracking() {
+    public ConflictedBackJumping() {
         problemName = "";
         firstSolCpu = 0.0;
         firstSolCc = 0L;
@@ -46,108 +44,116 @@ public class BackTracking {
         numNodeVisited = 0L;
         numBacktrack = 0L;
         numSolution = 0L;
-        variableOrderingHeuristic = "NA";
-        variableStaticDynamic = "static";
-        valueOderingHeuristic = "NA";
-        valueStaticDynamic = "NA";
+
         variablesAssignment = new HashMap<>();
         generatedStat = "";
     }
 
-    public BackTracking(String problemName,
+    public ConflictedBackJumping(String problemName,
                         List<PVariable> variables, List<PConstraint> constraints) {
         this();
         this.problemName = problemName;
         this.variables = variables;
         this.constraints = constraints;
+        this.conf_set = new ArrayList[this.variables.size()];
+        for (int i=0; i<conf_set.length; i++) {
+            conf_set[i] = new ArrayList<>(Arrays.asList(-1));
+        }
+        this.cbf = new Integer[this.variables.size()];
+        Arrays.fill(this.cbf, 0);
     }
 
-    //bcssp: Binary constraint satisfaction “search” problem
+
     public void run() {
         this.generatedStat += getInitReport();
         Long startTime = Utils.getCpuTimeInNano();
-        this.consistent = true;
-        BTStatus status = BTStatus.UNKNOWN;
+        consistent = true;
         int index = 0;
-        log.info("After applying order: " + this.varNameList());
+        BTStatus status = BTStatus.UNKNOWN;
         while (status == BTStatus.UNKNOWN) {
-            log.debug("index " + index);
-            if (consistent) {
-                index = btLabel(index);
+            if (this.consistent) {
+                index = cbj_label(index);
             } else {
                 this.numBacktrack += 1;
-                if (index == 0){
-                    if (this.numSolution > 0) { status = BTStatus.SOLUTION; }
-                    break;
-                }
-                index = btUnlabel(index);
+                index = cbj_unlabel(index);
             }
-            log.debug(varAssignment2String()+"\n");
-            if (index > variables.size()-1) {
-
-                this.numSolution+=1;
+            if (index > this.variables.size() - 1) {
+                this.numSolution++;
+                for (int i = 0; i < cbf.length; i ++) {
+                    cbf[i] = 1;
+                }
                 if (this.numSolution == 1) {
                     this.cpu = Utils.getCpuTimeInNano() - startTime;
                     this.generatedStat += this.getFirstSolutionStat();
                 }
-                log.info("Solution:" + this.getSolutionInStr());
-                index = this.variables.size() - 1; //this will later force label to be called on the last variable with next value
-                this.consistent = this.variables.get(this.variables.size() - 1).currentDomain.currentVals.size() > 0;
-                this.variables.get(this.variables.size() - 1).currentDomain.currentVals.remove(0);
-            } else if (index < 0 && this.numSolution > 0) {
+                this.consistent = false;
+                index = this.variables.size() - 1;
+            } else if (index < 0 && numSolution > 0) {
                 status = BTStatus.SOLUTION;
-                break;
             } else if (index < 0) {
                 status = BTStatus.IMPOSSIBLE;
-                break;
             }
+
         }
-        this.cpu = Utils.getCpuTimeInNano() - startTime;
-        this.generatedStat += this.getAllSolutionStat();
-        log.info(status.toString());
-        log.stdout(this.generatedStat);
+        this.generatedStat += getAllSolutionStat();
+        LOG.info(status.toString());
+        LOG.stdout(this.generatedStat);
+        LOG.stdout("Number solution " + this.numSolution);
         return;
     }
-    private boolean consistent;
-    private int btLabel(int varIndex) {
+
+    private Integer cbj_label(Integer varIndex) {
         PVariable vari = this.variables.get(varIndex);
         this.consistent = false;
 
         List<Integer> currentDomainVals = new ArrayList<>(vari.currentDomain.currentVals);
 
         for (int i=0; i<currentDomainVals.size() && !consistent; i++) {
-            Integer currentDomainVal = currentDomainVals.get(i);
-            variablesAssignment.put(vari, currentDomainVal);
             this.consistent = true;
+            Integer currentDomainVal = currentDomainVals.get(i);
+            this.variablesAssignment.put(vari, currentDomainVal);
             this.numNodeVisited += 1;
             for (int h=0; h<varIndex; h++) {
-                if (!consistent) { break; }
+                if (!this.consistent) { break; }
                 PVariable pastVar = variables.get(h);
-                //TODO: Double check this. should this be an && or || ???
-                consistent = check(vari, variablesAssignment.get(vari),
-                                    pastVar, variablesAssignment.get(pastVar), false) &&
-                                check(pastVar, variablesAssignment.get(vari),
-                                    vari, variablesAssignment.get(pastVar), true);
-                if (!consistent) {
+                this.consistent = check(vari, variablesAssignment.get(vari),
+                        pastVar, variablesAssignment.get(pastVar), false) &&
+                        check(pastVar, variablesAssignment.get(vari),
+                                vari, variablesAssignment.get(pastVar), true);
+                if (!this.consistent) {
+                    this.conf_set[varIndex].add(h);
                     vari.currentDomain.removeCurrentValByVal(currentDomainVal);
                 }
             }
         }
-        if (consistent) {
+
+        if (this.consistent) {
             return varIndex + 1;
         }
         return varIndex;
     }
 
-    private Integer btUnlabel(int varIndex) {
-        PVariable vari = this.variables.get(varIndex);
-        vari.resetCurrentDomain();
-        int h = varIndex - 1;
+    private Integer cbj_unlabel(int varIndex) {
+        if (varIndex == 0) { return -1; }
+        Integer h = 0;
+        if (cbf[varIndex] == 1) {
+            h = varIndex - 1;
+            cbf[varIndex] = 0;
+        } else {
+            h = Collections.max(conf_set[varIndex]);
+        }
+        conf_set[h] = Utils.listUnion(conf_set[h], conf_set[varIndex]);
+        Integer finalH = h;
+        conf_set[h].removeIf(v -> v.equals(finalH));
+
+        for (int j=h+1; j<=varIndex; j++) {
+            conf_set[j].clear();
+            this.variables.get(j).resetCurrentDomain();
+        }
         PVariable pastVar = this.variables.get(h);
-        pastVar.currentDomain.removeCurrentValByVal(variablesAssignment.getOrDefault(pastVar, null));
+        pastVar.currentDomain.removeCurrentValByVal(this.variablesAssignment.getOrDefault(pastVar, null));
         this.consistent = (pastVar.currentDomain.currentVals.size() != 0);
         return h;
-
     }
 
 
@@ -185,7 +191,6 @@ public class BackTracking {
         if (res.size() == 0) { return null; }
         return res;
     }
-
     public void keepNodeConsistent() {
         for (PConstraint con : this.constraints) {
             if (con.getScope().length != 1) { continue; }
@@ -202,18 +207,9 @@ public class BackTracking {
     }
 
     public String getInitReport() {
-        return "Instance name: " + this.problemName + "\n" +
-                "variable-order-heuristic: " + this.variableOrderingHeuristic + "\n" +
-                "var-static-dynamic: " + this.variableStaticDynamic + " \n" +
-                "value-ordering-heuristic: " + this.valueOderingHeuristic + "\n" +
-                "val-static-dynamic: " + this.valueOderingHeuristic + "\n";
+        return "Instance name: " + this.problemName + "\n" ;
     }
 
-    public String getSolutionInStr() {
-        return this.variables.stream()
-                .map(var -> this.variablesAssignment.get(var).toString())
-                .collect(Collectors.joining(","));
-    }
     public String getFirstSolutionStat() {
         String firstSolution = this.getSolutionInStr();
         firstSolution += "\t(" +
@@ -229,7 +225,6 @@ public class BackTracking {
                 "cpu: " + this.getCpuTimeInMicro() + "\n" +
                 "First solution: " + firstSolution + "\n";
     }
-
     public String getAllSolutionStat() {
         return "all-sol cc: " + this.cc + "\n" +
                 "all-sol nv: " + this.numNodeVisited + "\n" +
@@ -242,23 +237,10 @@ public class BackTracking {
         return (double) this.cpu / 100000.0;
     }
 
-    public String varsCurrentDomain2Str() {
-        String res = "";
-        for (PVariable var : variables) {
-            res += var.getName() + ": " + var.currentDomain.currentVals.toString() + "\n";
-        }
-        return res;
-    }
-
-    public String varAssignment2String() {
-        return this.variablesAssignment.values()
-                .stream().map(val -> val.toString())
+    public String getSolutionInStr() {
+        return this.variables.stream()
+                .map(var -> this.variablesAssignment.get(var).toString())
                 .collect(Collectors.joining(","));
     }
 
-    public String varNameList() {
-        return this.variables.stream()
-                .map(var -> var.getName())
-                .collect(Collectors.joining(", "));
-    }
 }

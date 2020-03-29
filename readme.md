@@ -83,4 +83,15 @@ Helper function below has been implemented
 - `public List<PConstraint> findConstraintByScope(List<PVariable> scope)`
 
 
+-----
+
+## Hw4
+
+Helper functions below have been implemented 
+
+- `private Integer cbj_label(Integer varIndex`
+- `private Integer cbj_unlabel(int varIndex)`
+- `public boolean check(PVariable vari, Integer vali,
+                            PVariable varj, Integer valj, boolean reverseVal)`
+- `public void keepNodeConsistent()`
 
