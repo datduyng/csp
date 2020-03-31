@@ -24,6 +24,7 @@ public class DynamicFC {
     public Long numBacktrack;
     public Long numSolution;
     public String generatedStat;
+    public String csvReport;
 
     private List<PVariable> variables;
     private List<PConstraint> constraints;
@@ -53,6 +54,8 @@ public class DynamicFC {
         futureFCMap = new HashMap<>();
         pastFCMap = new HashMap<>();
         generatedStat = "";
+        csvReport = "";
+
         unassignedVars = new ArrayList<>();
         instantiatedVars = new Stack<>();
     }
@@ -76,40 +79,31 @@ public class DynamicFC {
     }
 
     boolean afterSolution = false;
-    public void run() {
+    String run(String reportType) {
+        log.debug("Running DynamicFC .......");
         this.sortUnclaimedVars();
+        this.csvReport += this.problemName+","+"FC,"+this.orderingHeuristic+",";
         this.generatedStat += getInitReport();
         Long startTime = Utils.getCpuTimeInNano();
         this.consistent = true;
         BTStatus status = BTStatus.UNKNOWN;
         while (status == BTStatus.UNKNOWN) {
-            printStatus();
             if (this.consistent) {
-//                if (this.unassignedVars.isEmpty()) { break; }
-                log.debug("fcLabel()");
                     this.sortUnclaimedVars();
                     fclabel();
             } else {
-                log.debug("unlabel()");
                 fcUnlabel();
                 this.sortUnclaimedVars();
                 numBacktrack++;
             }
-//            if (this.unassignedVars.isEmpty()) {
-//                LOG.info("!this.consisten && unassignedVars.isEmpty()");
-//                break;
-//            }
-//            LOG.info("Solution num" + this.numSolution);
             if (consistent && this.unassignedVars.isEmpty()) {
                 numSolution++;
                 if (this.numSolution == 1) {
-//                    LOG.info("First solution");
                     this.cpu = Utils.getCpuTimeInNano() - startTime;
                     this.generatedStat += this.getFirstSolutionStat();
+                    this.csvReport += this.getFirstSolutionForCsvReport();
+                    break;
                 }
-                log.debug("------SOLUTION----");
-                printStatus();
-                log.debug("<<<<<<<<<<>>>>>>>>");
                 afterSolution = true;
             } else if (this.instantiatedVars.isEmpty() &&
                     this.numSolution > 0 &&
@@ -117,26 +111,28 @@ public class DynamicFC {
                      status = BTStatus.SOLUTION;
             } else if (this.instantiatedVars.isEmpty() &&
                        this.unassignedVars.get(0).currentDomain.currentVals.isEmpty()) {
-                status = BTStatus.IMPOSSIBLE;
+                status = BTStatus.SOLUTION;
             }
-            log.debug("%%%%%%%%%%%%%%%%%%END ITER%%%%%%%%%%%%%%%%%%");
-//            if (this.numSolution == 4) { break; }
         }
         this.generatedStat += getAllSolutionStat();
-        LOG.info(status.toString());
-        LOG.stdout(this.generatedStat);
-        LOG.stdout("Number solution " + this.numSolution);
-        return;
+        this.csvReport += joinStrs(new String[]{
+                this.cc+"", this.numNodeVisited+"",
+                this.numBacktrack+"", this.getCpuTimeInMicro()+"",
+                this.numSolution+""
+        });
+        log.debug(status.toString());
+        log.debug(this.generatedStat);
+        log.debug("Number solution " + this.numSolution);
+        if (reportType.equals("csv")) {
+            return this.csvReport;
+        }
+        return this.generatedStat;
     }
 
     public void fclabel() {
-        log.debug("before assignment");
-        log.debug("instantiatedVars " +  this.instantiatedVars.stream().map(v -> v.getName()).collect(Collectors.toList()).toString());
-        log.debug("unassignedVars " + this.unassignedVars.stream().map(v -> v.getName()).collect(Collectors.toList()).toString());
         this.consistent = false;
         int valIndex = 0;
         if (this.numSolution > 0 && afterSolution) {
-            LOG.info("Solution? keep going");
             int value = this.instantiatedVars.peek().currentDomain.currentVals.get(0);
             this.instantiatedVars.peek().currentDomain.removeCurrentValByVal(value);
             this.consistent = !this.instantiatedVars.peek().currentDomain.currentVals.isEmpty();
@@ -151,23 +147,15 @@ public class DynamicFC {
             int value = this.unassignedVars.get(0).currentDomain.currentVals.get(valIndex);
             this.numNodeVisited ++;
             this.consistent = true;
-//            for (int h=1; h<this.unassignedVars.size() && this.consistent; h++) {
-//                this.consistent = checkForward(this.unassignedVars.get(0), value, this.unassignedVars.get(h));
-//            }
             int h = 1;
             while (this.consistent && h<this.unassignedVars.size()) {
                 this.consistent = checkForward(this.unassignedVars.get(0), value, this.unassignedVars.get(h));
-                log.debug("check: " + this.unassignedVars.get(0).getName() + " val : " + value + " varh " + this.unassignedVars.get(h).getName() + " result: " + this.consistent);
-
                 h++;
             }
 
             if (!this.consistent) {
                 this.unassignedVars.get(0).currentDomain.removeCurrentValByVal(value);
-//                log.debug("before undoReduction");
-//                printStatus();
                 this.undoReduction(this.unassignedVars.get(0));
-//                log.debug("----");
                 valIndex--;
             }
             valIndex++;
@@ -213,7 +201,6 @@ public class DynamicFC {
                     this.check(vj, viVal, vi, vjVal, false)) ) {
                 reduction.add(vjVal);
             }
-
         }
 
         if (!reduction.isEmpty()) {
@@ -258,14 +245,6 @@ public class DynamicFC {
         OrderingHeuristic orderingMachine = new OrderingHeuristic(this.unassignedVars);
         orderingMachine.run(this.orderingHeuristic);
         this.unassignedVars = orderingMachine.variables;
-    }
-
-    public void printStatus() {
-        log.debug("Status");
-        for (PVariable var : this.variables) {
-            log.debug(var.getName() + " : " + var.currentDomain.currentVals.toString());
-        }
-        log.debug("-----");
     }
 
     public boolean check(PVariable vari, Integer vali,
@@ -327,6 +306,18 @@ public class DynamicFC {
     }
     public Double getCpuTimeInMicro() {
         return (double) this.cpu / 1000000.0;
+    }
+
+    public String getFirstSolutionForCsvReport() {
+        String[] parts = new String[]{
+                this.cc+"", this.numNodeVisited+"",
+                this.numBacktrack+"", this.getCpuTimeInMicro()+""
+        };
+        return joinStrs(parts)+",";
+    }
+
+    public String joinStrs(String[] parts) {
+        return Arrays.stream(parts).collect(Collectors.joining(","));
     }
 
     public String getFirstSolutionStat() {

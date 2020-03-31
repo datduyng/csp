@@ -63,6 +63,20 @@ public class OrderingHeuristic {
                 this.variables.remove(0);
             }
             this.variables = ordered;
+        } else if (methods.equalsIgnoreCase("dDEG")) {
+            Collections.sort(this.variables, (var1, var2) -> {
+                return var1.neighbors.size() == var2.neighbors.size() ?
+                        var1.getName().compareTo(var2.getName()) :
+                        var2.neighbors.size() - var1.neighbors.size();
+            });
+        } else if (methods.equalsIgnoreCase("dDD")) {
+            Collections.sort(this.variables, (var1, var2) -> {
+                if (var1.neighbors.isEmpty()) { return 1; }
+                if (var2.neighbors.isEmpty()) { return -1; }
+                return var1.currentDomain.currentVals.size()/var1.neighbors.size() == var2.currentDomain.currentVals.size()/var2.neighbors.size() ?
+                        var1.getName().compareTo(var2.getName()) :
+                        var1.currentDomain.currentVals.size()/var1.neighbors.size() - var2.currentDomain.currentVals.size()/var2.neighbors.size();
+            });
         } else {
             LOG.error("Invalid preOrdering methods: " + methods);
         }

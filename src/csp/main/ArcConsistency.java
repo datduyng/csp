@@ -52,11 +52,14 @@ public class ArcConsistency {
             change = false;
             for (PConstraint con : constraints) {
                 if (con.getArity() == 1) { continue; }
+
                 boolean updated = checkSupportedAndRevise(
                         con.getScope()[0], con.getScope()[1], false);
                 boolean updatedReverse = checkSupportedAndRevise(
                         con.getScope()[1], con.getScope()[0], true);
-
+                LOG.stdout("revise ("+con.getScope()[0].getName()+","+con.getScope()[1].getName()+") " +
+                        (updated || updatedReverse ));
+                LOG.stdout("------------\n\n");
                 if (con.getScope()[0].currentDomain.currentVals.size() == 0) {
                     this.fSize = null;
                     this.cpu = Utils.getCpuTimeInNano() - tic;
@@ -91,6 +94,9 @@ public class ArcConsistency {
         List<Integer> viVals = new ArrayList<>(vi.currentDomain.currentVals);
         boolean revised = false;
         for (Integer viVal : viVals) {
+            if (!reversed) {
+                LOG.stdout("  supported (" + vi.getName()+","+vj.getName()+") with val ("+ viVal+",?) result: "+ (supported(vi, viVal, vj, reversed)) );
+            }
             if (!supported(vi, viVal, vj, reversed)) {
                 revised = true;
                 this.fval+=1;
@@ -103,6 +109,9 @@ public class ArcConsistency {
     public boolean supported(PVariable vi, Integer viVal, PVariable vj, boolean reversed) {
         List<Integer> vjVals = new ArrayList<>(vj.currentDomain.currentVals);
         for (Integer vjVal : vjVals) {
+            if (!reversed) {
+                LOG.stdout("    check (" + vi.getName()+","+vj.getName()+") with val ("+ viVal+","+vjVal+") result: " + check(vi, viVal, vj, vjVal, reversed));
+            }
             if (check(vi, viVal, vj, vjVal, reversed)) {
                 return true;
             }

@@ -7,6 +7,7 @@ import utils.LOG;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class CSPSolver {
     public static String USAGE =
@@ -14,16 +15,21 @@ public class CSPSolver {
                     " [-a {ac1 | ac3}] " +
                     " [-s {BT|CBJ|FC}]" +
                     " [-u {LX|LD|DEG|DD|dLX|dLD|dDEG|dDD}";
-    public static void main(String[] args) {
+    private static LOG log;
 
+    public static void main(String[] args) {
+        log = new LOG(false);
         CliArgs cliArgs = new CliArgs(args);
 
         String file = cliArgs.switchValue("-f", null);
         String acType = cliArgs.switchValue("-a", "");
         String backtrack = cliArgs.switchValue("-s", "");
         String orderingHeuristic = cliArgs.switchValue("-u", null);
+        String reportType = cliArgs.switchValue("-r", "debug");
 
         InstanceParser parser = new InstanceParser();
+        String[] tokens = file.split("/");
+        String fileName = tokens[tokens.length-1];
         if (file != null) {
             parser.loadInstance(file);
             parser.parse(false);
@@ -55,11 +61,14 @@ public class CSPSolver {
 
         List<String> staticOrderings = Arrays.asList(new String[]{"LX", "LD", "DEG", "DD"});
         if (orderingHeuristic != null && staticOrderings.contains(orderingHeuristic)) {
+            log.debug("static order: " + orderingHeuristic);
             OrderingHeuristic oh = new OrderingHeuristic(variables);
             oh.run(orderingHeuristic);
             variables = oh.variables;
-            oh.printOrdering();
+//            oh.printOrdering();
         }
+        log.debug("PRint ordering....");
+        printOrdering(variables);
 
         if (backtrack.equals("BT")) {
             BackTracking BT = new BackTracking(
@@ -82,17 +91,31 @@ public class CSPSolver {
             if (dynamicOrdering.contains(orderingHeuristic)) {
                 DynamicFC fc = new DynamicFC(
                         orderingHeuristic,
-                        presentationName,
+                        fileName,
                         variables,
                         parser.getConstraintsAsList()
                 );
+                fc.orderingHeuristic = orderingHeuristic;
                 fc.keepNodeConsistent();
-                fc.run();
+                String report = fc.run(reportType);
+                LOG.stdout(report);
             } else {
-                FC fc = new FC(presentationName, variables, parser.getConstraintsAsList());
+                FC fc = new FC(fileName, variables, parser.getConstraintsAsList());
+                fc.orderingHeuristic = orderingHeuristic;
                 fc.keepNodeConsistent();
-                fc.run();
+                String report = fc.run(reportType);
+                LOG.stdout(report);
             }
+        } else {
+            LOG.error("Usage: " + USAGE);
         }
+    }
+    public static void printOrdering(List<PVariable> vars) {
+        log.debug(varNameList(vars));
+    }
+    private static String varNameList(List<PVariable> vars) {
+        return vars.stream()
+                .map(var -> var.getName())
+                .collect(Collectors.joining(", "));
     }
 }
